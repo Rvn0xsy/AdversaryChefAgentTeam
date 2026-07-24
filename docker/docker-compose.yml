@@ -1,0 +1,56 @@
+services:
+  daemon:
+    build:
+      context: ..
+      dockerfile: docker/daemon/Dockerfile
+    volumes:
+      - ./data/multica:/root/.multica
+      - ./data/codex:/root/.codex
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - MULTICA_API_URL=${MULTICA_API_URL:-http://multica-server:3000}
+    depends_on:
+      - kali-mcp
+      - asset-mcp
+      - mythic-mcp
+
+ kali-mcp:
+   build:
+     context: ..
+     dockerfile: docker/kali-mcp/Dockerfile
+    cap_add:
+      - NET_RAW
+      - NET_ADMIN
+      - SYS_PTRACE
+    sysctls:
+      - net.ipv6.conf.all.disable_ipv6=0
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+
+  asset-mcp:
+    build:
+      context: ..
+      dockerfile: docker/asset-mcp/Dockerfile
+    volumes:
+      - ./data/db:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+
+  mythic-mcp:
+    build:
+      context: ..
+      dockerfile: docker/mythic-mcp/Dockerfile
+    command:
+      - "--mythic-server=${MYTHIC_SERVER:-}"
+      - "--mythic-api-key=${MYTHIC_API_KEY:-}"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8082/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3

@@ -1,0 +1,16 @@
+# go docker mcp conventions
+- Go 语言项目，Go 1.26.4
+- go.work monorepo 管理 3 个 Go module：pkg/mcputil、servers/asset、servers/kali
+- Go module 路径：adversarychef/kali、adversarychef/asset、adversarychef/mcputil
+- 共享库 pkg/mcputil：提供 ServerConfig（ParseConfig）、TextResult、Run（含 /health + logging + recovery + graceful shutdown）
+- MCP Server 标准结构：cmd/server/main.go（入口 ~15 行）+ internal/tools/（tool handlers）+ internal/models/ + internal/store/（有状态时）+ internal/job/（异步任务）
+- HTTP/SSE transport 统一使用 mcp.NewSSEHandler
+- 项目根目录：/Users/rvn0xsy/Documents/Git/AdversaryChefAgentTeam
+- 不允许直接调用 OpenAI API，必须走 cc-switch
+- 渗透工具在 Docker 容器中运行
+- Docker Compose 文件位于 docker/docker-compose.yml，kali 容器需 privileged
+- .env 位于 docker/.env（gitignored）
+- 所有代码注释、jsonschema、Tool Description、错误消息均为英文
+- servers/kali 端口 8080，servers/asset 端口 8081
+- kali 的 job.Manager 有 DefaultMaxOutput=500_000 和 DefaultTimeout=30min 常量
+

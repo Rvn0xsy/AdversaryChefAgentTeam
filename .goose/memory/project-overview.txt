@@ -1,0 +1,51 @@
+# red-team penetration-testing multica codex mcp go
+# AdversaryChefAgentTeam 项目概览
+
+红队多功能 Agent 项目，基于 Multica + Codex 的协作式渗透测试平台。
+
+## 核心架构
+- **Multica 服务端**（自部署）：Postgres + Backend + Frontend，负责任务编排、Issue 管理、Agent 定义、Skills 存储
+- **Daemon + Codex CLI**：Runtime 执行层，通过 cc-switch 模型路由至 DeepSeek V4 Pro
+- **Kali MCP 容器**：暴露 Kali 工具链（nmap、metasploit、sqlmap、gobuster、hydra 等），异步 job 模式（exec → get_job → kill_job）
+- **Asset MCP 容器**：资产/线索/凭据/工作日志 CRUD，SQLite 持久化
+
+## 目录结构（重构后）
+```
+├── go.work                    # Go monorepo workspace
+├── pkg/mcputil/               # 共享库：ServerConfig、TextResult、Run()（含 /health + 中间件 + graceful shutdown）
+├── servers/
+│   ├── kali/                  # Kali MCP（端口 8080）
+│   │   ├── cmd/server/main.go # 17 行入口
+│   │   └── internal/
+│   │       ├── job/           # 异步任务管理（job + manager + 测试）
+│   │       └── tools/         # register + exec + query + kill
+│   └── asset/                 # Asset MCP（端口 8081）
+│       ├── cmd/server/main.go # 21 行入口
+│       └── internal/
+│           ├── models/        # Project/Asset/Clue/Credential/WorkLog
+│           ├── store/         # Store 接口 + MemoryStore + SQLiteStore
+│           └── tools/         # crud.go（泛型 Lister/Getter/Deleter）+ 5 个 entity 文件
+├── skills/                    # 5 个 SKILL.md 骨架（draft 状态）：penetration-methodology, owasp-checklist, compliance-rules, weekly-report-template, retrospective-template
+├── config/                    # codex/config.toml.example + multica/docker-compose.selfhost.yml.example
+├── docs/                      # 技术方案 + MCP Server 构建指南 + superpowers/specs + superpowers/plans
+├── docker/                    # Docker Compose 编排（daemon + kali + asset），含 healthcheck
+└── scripts/                   # 环境脚本（占位）
+
+## MCP Server 技术栈
+- Go 1.26.4 + modelcontextprotocol/go-sdk v1.6.1
+- HTTP/SSE transport（非 stdio）
+- go.work monorepo 管理 pkg/mcputil + servers/kali + servers/asset 三个 module
+- 内置 /health 端点 + 请求日志中间件 + panic recovery + SIGTERM 优雅关闭
+
+## 关键约束
+- 模型路由：cc-switch → DeepSeek V4 Pro（不直连 OpenAI）
+- 数据主权：自部署，不使用外部第三方服务
+- 环境隔离：渗透工具完全容器化
+- 凭据安全：敏感信息通过 Asset MCP 独立访问
+- 所有代码注释、jsonschema、Tool Description、错误消息均为英文
+
+├── data/                      # 持久化数据 + 配置
+│   ├── codex/                 # codex 配置模板
+│   ├── multica/               # multica 部署模板
+│   └── db/                    # asset-mcp SQLite 数据库（运行时）
+

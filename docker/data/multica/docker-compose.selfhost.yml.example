@@ -1,0 +1,23 @@
+# Multica self-hosted deployment template
+# Rename and fill in required values
+
+services:
+  multica-server:
+    image: multica/server:latest
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgres://user:password@db:5432/multica
+      SECRET_KEY: YOUR_SECRET_KEY
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: multica
+      POSTGRES_PASSWORD: YOUR_PASSWORD
+      POSTGRES_DB: multica
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:
