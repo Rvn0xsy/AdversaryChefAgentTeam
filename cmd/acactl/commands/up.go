@@ -90,9 +90,9 @@ func Up(dataDir, projectRoot string, ports [3]int) error {
 		Binary: filepath.Join(pm.BinDir, "acasched"),
 		Args: []string{
 			"-db", acaschedDB,
-			"-nexus-mcp", fmt.Sprintf("http://127.0.0.1:%d", nexusPort),
-			"-kali-mcp", fmt.Sprintf("http://127.0.0.1:%d", kaliPort),
 			"-prompts", filepath.Join(projectRoot, "prompts"),
+			"-skills", filepath.Join(projectRoot, "skills"),
+			"-registry", filepath.Join(projectRoot, "prompts", "_mcp-registry.yaml"),
 			"-log-dir", logDir,
 		},
 	}
