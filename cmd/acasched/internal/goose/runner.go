@@ -5,24 +5,38 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
 	"adversarychef/acasched/internal/store"
 )
 
 type Runner struct {
-	PromptsDir string
-	WorkDir    string
+	PromptsDir string                 // e.g., "prompts"
+	SkillsDir  string                 // e.g., "skills"
 	LogDir     string
-	NexusMCP   string
-	KaliMCP    string
-	MythicMCP  string
+	Registry   map[string]string      // loaded from _mcp-registry.yaml
 }
 
 func (r *Runner) Execute(ctx context.Context, task *store.Task) (*Result, error) {
-	prompt := r.buildPrompt(task)
+	// Parse agent path: task.Agent format "red-team/echo-recon"
+	parts := strings.SplitN(task.Agent, "/", 2)
+	agentPath := task.Agent + ".md"
+	if len(parts) == 2 {
+		agentPath = filepath.Join(r.PromptsDir, parts[0], parts[1]+".md")
+	}
+	agentPromptBytes, err := os.ReadFile(agentPath)
+	var agentPromptStr string
+	if err != nil {
+		log.Printf("runner: failed to read prompt %s: %v", agentPath, err)
+	} else {
+		agentPromptStr = string(agentPromptBytes)
+	}
+
+	prompt := r.buildPrompt(task, agentPromptStr)
 	tmpFile, err := os.CreateTemp("", "goose-instructions-*.md")
 	if err != nil {
 		return nil, fmt.Errorf("create temp file: %w", err)
@@ -43,20 +57,46 @@ func (r *Runner) Execute(ctx context.Context, task *store.Task) (*Result, error)
 		"--output-format", "stream-json",
 		"--no-profile",
 	}
-	if r.NexusMCP != "" {
-		args = append(args, "--with-streamable-http-extension", r.NexusMCP)
+
+	// Parse prompt for MCP requirements
+	meta := ParsePromptMeta(agentPromptBytes)
+
+	// Mount only required MCP extensions from registry
+	for _, mcpName := range meta.Requires {
+		url, ok := r.Registry[mcpName]
+		if !ok {
+			log.Printf("runner: MCP %q not found in registry, skipping", mcpName)
+			continue
+		}
+		args = append(args, "--with-streamable-http-extension", url)
 	}
-	if r.KaliMCP != "" {
-		args = append(args, "--with-streamable-http-extension", r.KaliMCP)
+
+	// Mount _shared skills (always)
+	sharedSkillsDir := filepath.Join(r.SkillsDir, "_shared")
+	if entries, err := os.ReadDir(sharedSkillsDir); err == nil {
+		for _, entry := range entries {
+			if !entry.IsDir() {
+				continue
+			}
+			hostPath := filepath.Join(sharedSkillsDir, entry.Name())
+			containerPath := "/root/.agents/skills/" + entry.Name()
+			args = append(args, "-v", hostPath+":"+containerPath+":ro")
+		}
 	}
-	if r.MythicMCP != "" {
-		args = append(args, "--with-streamable-http-extension", r.MythicMCP)
+
+	// Mount agent-specific skills from prompt metadata
+	for _, skill := range meta.Skills {
+		hostPath := filepath.Join(r.SkillsDir, skill)
+		if _, err := os.Stat(hostPath); os.IsNotExist(err) {
+			log.Printf("runner: skill dir %q not found, skipping", hostPath)
+			continue
+		}
+		skillName := filepath.Base(skill)
+		containerPath := "/root/.agents/skills/" + skillName
+		args = append(args, "-v", hostPath+":"+containerPath+":ro")
 	}
 
 	cmd := exec.CommandContext(ctx, "goose", args...)
-	if r.WorkDir != "" {
-		cmd.Dir = r.WorkDir
-	}
 
 	if r.LogDir != "" {
 		os.MkdirAll(r.LogDir, 0755)
@@ -98,13 +138,7 @@ func (r *Runner) Execute(ctx context.Context, task *store.Task) (*Result, error)
 	return parseStreamOutput(string(output)), nil
 }
 
-func (r *Runner) buildPrompt(task *store.Task) string {
-	content, err := os.ReadFile(r.PromptsDir + "/" + task.Agent + ".md")
-	agentPrompt := ""
-	if err == nil {
-		agentPrompt = string(content)
-	}
-
+func (r *Runner) buildPrompt(task *store.Task, agentPrompt string) string {
 	return fmt.Sprintf(`## Session Binding
 project_id: %s
 task_id: %s

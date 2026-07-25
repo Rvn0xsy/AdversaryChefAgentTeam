@@ -18,10 +18,9 @@ func main() {
 	dbPath := flag.String("db", "acasched.db", "sqlite database path")
 	port := flag.Int("port", 9090, "HTTP API port")
 	promptsDir := flag.String("prompts", "prompts", "prompts directory")
+	skillsDir := flag.String("skills", "skills", "skills directory")
 	logDir := flag.String("log-dir", "", "task log directory (default: ~/.aca/logs/tasks/)")
-	nexusURL := flag.String("nexus-mcp", "http://127.0.0.1:8081", "nexus-mcp URL")
-	kaliURL := flag.String("kali-mcp", "http://127.0.0.1:8080", "kali-mcp URL")
-	mythicURL := flag.String("mythic-mcp", "http://127.0.0.1:8082", "mythic-mcp URL")
+	registryPath := flag.String("registry", "prompts/_mcp-registry.yaml", "MCP registry path")
 	flag.Parse()
 
 	s, err := store.NewStore(*dbPath)
@@ -30,12 +29,16 @@ func main() {
 	}
 	defer s.Close()
 
+	registry, err := goose.LoadRegistry(*registryPath)
+	if err != nil {
+		log.Fatalf("load MCP registry: %v", err)
+	}
+
 	runner := &goose.Runner{
 		PromptsDir: *promptsDir,
+		SkillsDir:  *skillsDir,
 		LogDir:     *logDir,
-		NexusMCP:   *nexusURL,
-		KaliMCP:    *kaliURL,
-		MythicMCP:  *mythicURL,
+		Registry:   registry,
 	}
 
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
