@@ -12,7 +12,7 @@ description: HTTP probing with httpx. Use when asked to probe web servers, finge
 
 ## Boundaries
 - **In scope**: HTTP/HTTPS probing, status code checks, server header capture, technology detection
-- **Out of scope**: Directory brute-force (hand off to web-fuzzing skill). JS crawling (hand off to js-analysis skill). Vulnerability scanning — NEVER run nuclei or sqlmap from this skill. Active exploitation (hand off to AC-Breach)
+- **Out of scope**: Directory brute-force (hand off to web-fuzzing skill). JS crawling (hand off to js-analysis skill). Vulnerability scanning (hand off to web-vuln-scan skill). Active exploitation (hand off to AC-Breach)
 
 ## Workflow
 1. `exec` with `echo -e "<url1>\n<url2>" | httpx -status-code -server -title -tech-detect -silent`
