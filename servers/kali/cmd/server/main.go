@@ -12,5 +12,5 @@ import (
 func main() {
 	cfg := mcputil.ParseConfig("kali", "0.3.0", 8080)
 	mgr := job.NewManager(job.DefaultMaxOutput, job.DefaultTimeout)
-	mcputil.Run(cfg, func(s *mcp.Server) { tools.Register(s, mgr) })
+	mcputil.Run(cfg, func(s *mcp.Server) { tools.Register(s, mgr) }, nil)
 }

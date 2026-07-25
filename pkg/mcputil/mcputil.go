@@ -3,9 +3,12 @@
 package mcputil
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -60,6 +63,23 @@ func ParseConfig(name, version string, defaultPort int) ServerConfig {
 	}
 }
 
+// ---- Context helpers for session-bound project_id ----
+
+type ctxKey int
+
+const CtxKeyProjectID ctxKey = iota
+
+// ProjectIDFromContext extracts the project_id injected by session-binding middleware.
+func ProjectIDFromContext(ctx context.Context) string {
+	id, _ := ctx.Value(CtxKeyProjectID).(string)
+	return id
+}
+
+// WithProjectID injects a project_id into the context.
+func WithProjectID(ctx context.Context, projectID string) context.Context {
+	return context.WithValue(ctx, CtxKeyProjectID, projectID)
+}
+
 // AddLoggingTool registers a tool handler with logging: prints tool name and params on call.
 func AddLoggingTool[P any](server *mcp.Server, tool *mcp.Tool, handler func(context.Context, *mcp.CallToolRequest, P) (*mcp.CallToolResult, any, error)) {
 	wrapped := func(ctx context.Context, req *mcp.CallToolRequest, params P) (*mcp.CallToolResult, any, error) {
@@ -82,7 +102,8 @@ func TextResult(text string) *mcp.CallToolResult {
 }
 
 // Run starts the MCP server with graceful shutdown.
-func Run(cfg ServerConfig, register func(*mcp.Server)) error {
+// sm may be nil for servers that do not use session-to-project binding.
+func Run(cfg ServerConfig, register func(*mcp.Server), sm *SessionMap) error {
 	server := mcp.NewServer(&mcp.Implementation{
 		Name:    cfg.Name,
 		Version: cfg.Version,
@@ -100,7 +121,7 @@ func Run(cfg ServerConfig, register func(*mcp.Server)) error {
 	mux.HandleFunc("/health", healthHandler(cfg))
 	mux.Handle("/", handler)
 
-	wrapped := withMiddleware(mux)
+	wrapped := withMiddleware(mux, sm)
 
 	srv := &http.Server{
 		Addr:    cfg.Addr(),
@@ -132,8 +153,8 @@ func healthHandler(cfg ServerConfig) http.HandlerFunc {
 	}
 }
 
-// withMiddleware applies request logging and panic recovery.
-func withMiddleware(next http.Handler) http.Handler {
+// withMiddleware applies request logging, session-binding enforcement, and panic recovery.
+func withMiddleware(next http.Handler, sm *SessionMap) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 
@@ -144,6 +165,37 @@ func withMiddleware(next http.Handler) http.Handler {
 				http.Error(w, "internal server error", http.StatusInternalServerError)
 			}
 		}()
+
+		// ---- Session-binding enforcement (only when SessionMap is provided) ----
+		if sm != nil && r.Method == http.MethodPost {
+			sessionID := r.Header.Get("Mcp-Session-Id")
+			if sessionID != "" {
+				body, readErr := io.ReadAll(r.Body)
+				if readErr == nil {
+					r.Body = io.NopCloser(bytes.NewReader(body))
+
+					var toolCall struct {
+						Params struct {
+							ProjectID string `json:"project_id"`
+						} `json:"params"`
+					}
+					if json.Unmarshal(body, &toolCall) == nil && toolCall.Params.ProjectID != "" {
+						projectID, bindErr := sm.GetOrBind(sessionID, toolCall.Params.ProjectID)
+						if bindErr != nil {
+							log.Printf("[session] binding conflict session=%s project=%s: %v",
+								sessionID, toolCall.Params.ProjectID, bindErr)
+							w.Header().Set("Content-Type", "application/json")
+							w.WriteHeader(http.StatusForbidden)
+							fmt.Fprintf(w, `{"error":"project binding conflict: %s"}`, bindErr.Error())
+							return
+						}
+						ctx := WithProjectID(r.Context(), projectID)
+						r = r.WithContext(ctx)
+						log.Printf("[session] bound session=%s -> project=%s", sessionID, projectID)
+					}
+				}
+			}
+		}
 
 		next.ServeHTTP(w, r)
 

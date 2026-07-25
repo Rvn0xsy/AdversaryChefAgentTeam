@@ -21,5 +21,5 @@ func main() {
 
 	mcputil.Run(cfg, func(server *mcp.Server) {
 		tools.Register(server, c)
-	})
+	}, nil)
 }
