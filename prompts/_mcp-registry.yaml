@@ -1,0 +1,12 @@
+# MCP Registry — maps MCP names to URLs
+# Runner reads this to resolve agent "Requires" declarations.
+# Supports both local (http://127.0.0.1) and internet (https://api.example.com) MCPs.
+
+nexus-mcp:  "http://127.0.0.1:8081"
+kali-mcp:   "http://127.0.0.1:8080"
+mythic-mcp: "http://127.0.0.1:8082"
+
+# Internet MCP examples (uncomment when needed):
+# shodan-mcp:      "https://api.shodan.io/mcp"
+# virustotal-mcp:  "https://www.virustotal.com/mcp"
+# semgrep-mcp:     "https://semgrep.internal/mcp"

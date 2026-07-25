@@ -1,0 +1,8 @@
+# Squad Registry — declares available squads and their directory mappings
+# To add a new squad: add an entry here + create prompts/<dir>/ and skills/<dir>/
+
+squads:
+  red-team:
+    description: "攻防厨师团 — Red Team Operations"
+    prompt_dir: "red-team"
+    skill_dir: "red-team"
