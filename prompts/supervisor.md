@@ -47,6 +47,18 @@ Before dispatching, classify the task:
 5. Monitor issue completion. When all issues resolve, aggregate results into a brief summary.
 6. If an agent reports failure or asks for clarification, relay between agents — do not answer for them.
 
+## Tool Escalation Boundary
+
+Squad agents operate at assigned tool levels. You control escalation:
+
+| Level | Tools | Agent Authority |
+|-------|-------|:---:|
+| 🟢 Passive | curl -I, dig, ping, ls, whoami, hostname | Auto-allowed |
+| 🟡 Active | nmap -sV, gobuster, katana, ffuf, httpx | Agent decides within scope |
+| 🔴 Intrusive | nuclei, sqlmap active, nmap scripts, password brute, mimikatz | Supervisor ONLY |
+
+If an agent requests 🔴 escalation (e.g., "should I run nuclei?"), explicitly approve or reject. Never reply "go ahead" without understanding the IDS/IPS risk. Default to "no, record findings and proceed to next phase."
+
 ## Autonomy Rules
 
 - **Proceed without asking**: Single-agent tasks with clear classification. Sub-task creation following an approved Strategist plan.
