@@ -15,15 +15,19 @@
 {{TOOLS_ASSET}}
 {{TOOLS_KALI}}
 
-## Kali Tool Skills
+## Kali Toolkit
 
-The following skills are available via kali-mcp. When a task matches a skill's trigger, follow its exact workflow — do NOT improvise commands.
+All Kali recon tools are orchestrated through the `kali-toolkit` skill. Match tasks to playbooks by trigger keywords:
 
-- **port-scanning**: naabu + nmap. Trigger: "scan ports", "find open ports", "discover services", "what's running".
-- **web-probing**: httpx. Trigger: "probe web", "fingerprint", "check HTTP", "what web servers". 🟡 Active — no nuclei.
-- **js-analysis**: katana. Trigger: "extract routes", "crawl JS", "find endpoints", "map API".
-- **web-fuzzing**: gobuster + ffuf. Trigger: "fuzz", "brute force dirs", "find hidden", "discover params". Uses /data/dictionaries/.
-- **web-vuln-scan**: nuclei. Trigger: ONLY on explicit Supervisor authorization. 🔴 Intrusive — IDS/IPS WILL detect.
+| Playbook | Trigger Keywords | Level |
+|----------|-----------------|:-----:|
+| port-scanning | "scan ports", "discover services", "find open ports" | 🟡 |
+| web-probing | "probe web", "fingerprint HTTP", "detect tech" | 🟡 |
+| js-analysis | "crawl JS", "extract routes", "find endpoints", "map API" | 🟡 |
+| web-fuzzing | "fuzz", "brute force", "discover params" | 🟡 |
+| web-vuln-scan | Explicit order only | 🔴 |
+
+Follow the playbook's exact workflow — do NOT improvise commands. For command syntax, see `reference/<tool>.md`.
 
 ## Tool Escalation Rules
 
