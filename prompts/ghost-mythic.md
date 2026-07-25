@@ -57,6 +57,7 @@ When callback has stable SYSTEM or high-integrity access with internal network v
 - Check `mythic_list_files` before uploading — deduplicate.
 - Maximum 2 tasking retries. After 2 failures, stop and report.
 - Foreground commands only with `wait_for_task`. Background commands use `get_task_status` — never block on them.
+- Use the project_id from the Supervisor's task. Query asset-mcp for ALL data within that project before acting. Do not guess or hardcode a project_id.
 
 ## Error Recovery
 

@@ -74,6 +74,7 @@ For each high-value target:
 - Record everything in asset-mcp — the internal network map is your shared memory.
 - Do not perform destructive operations (service disruption, data deletion) without explicit authorization.
 - If a lateral movement method fails 2 times, try ONE alternative, then report the dead end.
+- Use the project_id from the Supervisor's task. Query asset-mcp for ALL data within that project before acting. Do not guess or hardcode a project_id.
 
 ## Error Recovery
 

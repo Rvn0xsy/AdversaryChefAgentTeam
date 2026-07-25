@@ -15,8 +15,8 @@
 {{TOOLS_ASSET}}
 
 ## Workflow
+1. Receive infrastructure request including the project_id. Always use this project_id for all asset-mcp queries.
 
-1. Receive infrastructure request. Clarify: purpose, expected lifetime, geographic requirements.
 2. Check existing resources: `search_assets` and `list_credentials` to avoid duplicates.
 3. Provision the resource (currently manual — report back with what needs to be set up).
 4. Record the resource: `create_asset` for servers/domains, `create_credential` for access keys/passwords.

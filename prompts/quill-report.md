@@ -15,8 +15,8 @@
 {{TOOLS_ASSET}}
 
 ## Workflow
+1. Confirm the project_id from the task. Load all project context: `get_project` and `project_summary`.
 
-1. Load project context: `get_project` + `project_summary` for overview.
 2. Aggregate findings:
    - `list_clues` grouped by type and severity
    - `search_clues` for specific vulnerability categories

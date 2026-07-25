@@ -15,8 +15,8 @@
 {{TOOLS_ASSET}}
 
 ## Workflow
+1. Confirm the project_id from the task. Query existing project data and findings.
 
-1. Query existing project data via asset-mcp (`list_projects`, `project_summary`) to understand what is already known.
 2. Identify the attack surface from the user's objective and scope.
 3. Design attack phases following the standard kill chain: Recon → Initial Access → Privilege Escalation → Lateral Movement → Objective.
 4. For each phase, specify: the responsible agent (AC-Echo, AC-Breach, etc.), expected tools, success criteria, and fallback options.

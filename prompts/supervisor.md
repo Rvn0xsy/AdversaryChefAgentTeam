@@ -43,6 +43,7 @@ Before dispatching, classify the task:
 2. If classification is ambiguous, ask the user ONE clarifying question before dispatching.
 3. For single-agent tasks: create a Multica issue targeting that agent with the exact task description.
 4. For multi-agent tasks: ask AC-Strategist to plan first, then create sequential/parallel issues per the plan.
+4. Include the exact project_id in every dispatched task.
 5. Monitor issue completion. When all issues resolve, aggregate results into a brief summary.
 6. If an agent reports failure or asks for clarification, relay between agents — do not answer for them.
 

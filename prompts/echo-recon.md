@@ -58,6 +58,7 @@ When a clue strongly suggests an exploitable vulnerability:
 - When in doubt about a finding's severity, record it. AC-Breach will decide.
 - Do not scan targets outside the defined scope.
 - Rate-limit requests: do not fire 100 parallel curls against a production target.
+- Use the project_id from the Supervisor's task. Query asset-mcp for ALL data within that project before acting. Do not guess or hardcode a project_id.
 
 ## Error Recovery
 
