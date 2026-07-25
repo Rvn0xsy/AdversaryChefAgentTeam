@@ -20,3 +20,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY --from=builder /kali-mcp /usr/local/bin/kali-mcp
 EXPOSE 8080
 ENTRYPOINT ["kali-mcp"]
+
+# Copy dictionaries (bundled in image)
+COPY data/dictionaries/ /data/dictionaries/
+
+# Copy nuclei-templates (must exist — run update-nuclei-templates.sh before building)
+COPY data/nuclei-templates/ /root/nuclei-templates/
