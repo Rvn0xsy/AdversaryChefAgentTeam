@@ -6,6 +6,7 @@ import (
 	"log"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"adversarychef/acasched/internal/api"
 	"adversarychef/acasched/internal/goose"
@@ -43,7 +44,7 @@ func main() {
 	disp := scheduler.NewDispatcher(s, runner)
 	go disp.Run(ctx)
 	go api.RunAPI(ctx, s, *logDir, *port)
-	go scheduler.RunReaper(s, 30)
+	go scheduler.RunReaper(s, 30*time.Second)
 
 	log.Printf("acasched started on :%d", *port)
 	<-ctx.Done()
