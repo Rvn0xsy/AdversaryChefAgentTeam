@@ -14,10 +14,10 @@ services:
       - asset-mcp
       - mythic-mcp
 
- kali-mcp:
-   build:
-     context: ..
-     dockerfile: docker/kali-mcp/Dockerfile
+  kali-mcp:
+    build:
+      context: ..
+      dockerfile: docker/kali-mcp/Dockerfile
     cap_add:
       - NET_RAW
       - NET_ADMIN
