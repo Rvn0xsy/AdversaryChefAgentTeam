@@ -24,14 +24,14 @@ prompts/
 │   ├── asset.md                # asset-mcp 工具清单（28 tools）
 │   ├── kali.md                 # kali-mcp 工具清单（4 tools）
 │   └── mythic.md               # mythic-mcp 工具清单（14 tools）
-├── supervisor.md               # 攻防总指挥 — 任务分类 + squad 分派
-├── strategist.md               # 战略规划师 — 攻击路径设计
-├── echo-recon.md               # 攻击面测绘师 — 外网侦察→路由提取→接口验证
-├── breach-exploit.md           # 漏洞利用师 — RCE/SQLi/反序列化
-├── ghost-mythic.md             # C2 操作员 — 纯 C2（tasking/免杀/文件）
-├── path-lateral.md             # 内网路径师 — 提权/凭据/探测/横向
-├── forge-resource.md           # 资源管理员 — 基础设施
-└── quill-report.md             # 报告编写师 — 攻击路径还原/报告输出
+├── supervisor.md               # AC-Supervisor — 任务分类 + squad 分派
+├── strategist.md               # AC-Strategist — 攻击路径设计
+├── echo-recon.md               # AC-Echo — 外网侦察→路由提取→接口验证
+├── breach-exploit.md           # AC-Breach — RCE/SQLi/反序列化
+├── ghost-mythic.md             # AC-Ghost — 纯 C2（tasking/免杀/文件）
+├── path-lateral.md             # AC-Path — 提权/凭据/探测/横向
+├── forge-resource.md           # AC-Forge — 基础设施
+└── quill-report.md             # AC-Quill — 攻击路径还原/报告输出
 ```
 
 命名规则：`{代号}-{角色}.md`，小写 + 连字符。`_tools/` 下划线前缀表示支撑文件。
@@ -42,30 +42,32 @@ prompts/
 
 ### 2.1 Agent 角色矩阵
 
+所有 agent 使用 `AC-` 前缀（AdversaryChef 缩写），与 Multica 现有 agent 区分。
+
 | Agent | 代号 | 核心职责 | ATT&CK 覆盖 | Requires MCP |
 |-------|------|---------|-------------|:---:|
-| Supervisor | 总指挥 | 任务分类 → squad 分派 → 结果汇总 | — | — |
-| Strategist | 战略家 | 攻击路径设计、剧本编排、风险评估 | — | asset |
-| Echo | 攻击面测绘 | 外网侦察→JS路由提取→接口验证→漏洞线索 | TA0043 | asset, kali |
-| Forge | 铁匠铺 | 基础设施：VPS/CDN/隧道/钓鱼站点 | TA0042 | asset |
-| Breach | 突破口 | 漏洞利用：RCE/SQLi/命令注入/反序列化 | TA0001 | kali |
-| Ghost | 幽灵 | **纯 C2**：任务下发、免杀维持、文件传输 | TA0011/TA0002/TA0005 | mythic, asset |
-| Path | 内网路径 | 提权+凭据窃取+内网探测+横向移动 | TA0004/TA0006/TA0007/TA0008 | mythic, kali, asset |
-| Quill | 羽毛笔 | 攻击路径还原、结构化报告 | — | asset |
+| AC-Supervisor | 总指挥 | 任务分类 → squad 分派 → 结果汇总 | — | — |
+| AC-Strategist | 战略家 | 攻击路径设计、剧本编排、风险评估 | — | asset |
+| AC-Echo | 攻击面测绘 | 外网侦察→JS路由提取→接口验证→漏洞线索 | TA0043 | asset, kali |
+| AC-Forge | 铁匠铺 | 基础设施：VPS/CDN/隧道/钓鱼站点 | TA0042 | asset |
+| AC-Breach | 突破口 | 漏洞利用：RCE/SQLi/命令注入/反序列化 | TA0001 | kali |
+| AC-Ghost | 幽灵 | **纯 C2**：任务下发、免杀维持、文件传输 | TA0011/TA0002/TA0005 | mythic, asset |
+| AC-Path | 内网路径 | 提权+凭据窃取+内网探测+横向移动 | TA0004/TA0006/TA0007/TA0008 | mythic, kali, asset |
+| AC-Quill | 羽毛笔 | 攻击路径还原、结构化报告 | — | asset |
 
 ### 2.2 Agent 手递手边界
 
 ```
-Echo ──漏洞线索──→ Breach
+AC-Echo ──漏洞线索──→ AC-Breach
    "http://target/api/user?id=1' 疑似SQL注入，参数: id, 类型: GET"
    
-Breach ──初始shell──→ Ghost
+AC-Breach ──初始shell──→ AC-Ghost
    "target(10.0.0.5): 已获取 webshell，进程 PID 1234"
    
-Ghost ──稳定回调──→ Path
+AC-Ghost ──稳定回调──→ AC-Path
    "callback ID 3 (DC-01): SYSTEM 权限，可开始内网"
    
-Path ──凭据/新入口──→ Ghost（新 callback）
+AC-Path ──凭据/新入口──→ AC-Ghost（新 callback）
    "DC-02: 获取 domain admin 凭据，已下发新 agent"
 ```
 
@@ -75,14 +77,14 @@ Supervisor 不假设任务总从侦察开始。先分类，再分派：
 
 | 任务类型 | 触发模式 | 分派 |
 |---------|---------|------|
-| Full engagement | "penetration test X", "attack Y", "完整渗透" | Strategist → multi-agent chain |
-| C2 operation | callback/agent mention, "task/shell/upload on" | Ghost directly |
-| Lateral movement | "move to", "pivot", "横向", "from X to Y" | Path directly |
-| Vulnerability exploit | specific vuln name, "exploit this", "利用" | Breach directly |
-| Surface mapping | "scan", "recon", "侦察", "find subdomains", "资产测绘" | Echo directly |
-| Infrastructure | "deploy", "server", "tunnel", "domain", "隧道" | Forge directly |
-| Intelligence | "summarize", "报告", "what did we find", "history" | Self-query + Quill |
-| Planning | "plan", "strategy", "方案", "what should we do" | Strategist |
+| Full engagement | "penetration test X", "attack Y", "完整渗透" | AC-Strategist → multi-agent chain |
+| C2 operation | callback/agent mention, "task/shell/upload on" | AC-Ghost directly |
+| Lateral movement | "move to", "pivot", "横向", "from X to Y" | AC-Path directly |
+| Vulnerability exploit | specific vuln name, "exploit this", "利用" | AC-Breach directly |
+| Surface mapping | "scan", "recon", "侦察", "find subdomains", "资产测绘" | AC-Echo directly |
+| Infrastructure | "deploy", "server", "tunnel", "domain", "隧道" | AC-Forge directly |
+| Intelligence | "summarize", "报告", "what did we find", "history" | Self-query + AC-Quill |
+| Planning | "plan", "strategy", "方案", "what should we do" | AC-Strategist |
 
 ---
 
@@ -369,7 +371,7 @@ sed -i 's/{{MCP_ASSET_URL}}/http:\/\/127.0.0.1:8081/g' /tmp/echo-final.md
 sed -i 's/{{MCP_KALI_URL}}/http:\/\/127.0.0.1:8080/g' /tmp/echo-final.md
 
 # 3. 复制到 Multica agent instruction
-multica agent create --name "Echo" --instructions "$(cat /tmp/echo-final.md)" --runtime-id <codex-id>
+multica agent create --name "AC-Echo" --instructions "$(cat /tmp/echo-final.md)" --runtime-id <codex-id>
 
 # 4. 配置 MCP
 multica agent update <agent-id> --mcp-config '{"mcpServers":{"asset":{"type":"http","url":"http://127.0.0.1:8081"},"kali":{"type":"http","url":"http://127.0.0.1:8080"}}}'
@@ -393,13 +395,13 @@ vim prompts/_tools/asset.md  # 加新工具
 | `prompts/_tools/asset.md` | asset-mcp 工具注册表 |
 | `prompts/_tools/kali.md` | kali-mcp 工具注册表 |
 | `prompts/_tools/mythic.md` | mythic-mcp 工具注册表 |
-| `prompts/supervisor.md` | 总指挥 prompt |
-| `prompts/strategist.md` | 战略规划 prompt |
-| `prompts/echo-recon.md` | 攻击面测绘 prompt |
-| `prompts/breach-exploit.md` | 漏洞利用 prompt |
-| `prompts/ghost-mythic.md` | C2 操作 prompt |
-| `prompts/path-lateral.md` | 内网路径 prompt |
-| `prompts/forge-resource.md` | 资源管理 prompt |
-| `prompts/quill-report.md` | 报告编写 prompt |
+| `prompts/supervisor.md` | AC-Supervisor 总指挥 prompt |
+| `prompts/strategist.md` | AC-Strategist 战略规划 prompt |
+| `prompts/echo-recon.md` | AC-Echo 攻击面测绘 prompt |
+| `prompts/breach-exploit.md` | AC-Breach 漏洞利用 prompt |
+| `prompts/ghost-mythic.md` | AC-Ghost C2 操作 prompt |
+| `prompts/path-lateral.md` | AC-Path 内网路径 prompt |
+| `prompts/forge-resource.md` | AC-Forge 资源管理 prompt |
+| `prompts/quill-report.md` | AC-Quill 报告编写 prompt |
 | `scripts/expand-tools.sh` | 占位符展开脚本 |
 | `scripts/validate-prompts.sh` | 占位符校验脚本 |
