@@ -15,6 +15,7 @@ venv/
 *.swp
 *.swo
 
+.env
 docker/.env
 
 *.pem
@@ -30,5 +31,5 @@ repo/
 data/nuclei-templates/
 server
 acactl
-acasched
+/acasched
 .worktrees/

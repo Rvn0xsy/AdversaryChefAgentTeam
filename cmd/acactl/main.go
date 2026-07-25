@@ -5,11 +5,11 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 
 	"adversarychef/acactl/commands"
 )
 
-// commands that only use global flags (no subcommand-specific flags)
 var globalCommands = map[string]bool{
 	"up":     true,
 	"down":   true,
@@ -24,29 +24,13 @@ func main() {
 	flag.IntVar(&ports[1], "kali-port", 8080, "kali-mcp port")
 	flag.IntVar(&ports[2], "acasched-port", 9090, "acasched port")
 
-	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage: acactl <command> [options]\n\n")
-		fmt.Fprintf(os.Stderr, "Commands:\n")
-		fmt.Fprintf(os.Stderr, "  up       Start all infrastructure\n")
-		fmt.Fprintf(os.Stderr, "  down     Stop all services\n")
-		fmt.Fprintf(os.Stderr, "  status   Check service health\n")
-		fmt.Fprintf(os.Stderr, "  run      Dispatch a task and wait for completion\n")
-		fmt.Fprintf(os.Stderr, "  tasks    List tasks\n")
-		fmt.Fprintf(os.Stderr, "  logs     View task execution logs\n")
-		fmt.Fprintf(os.Stderr, "  project  Create a project\n")
-		fmt.Fprintf(os.Stderr, "\nOptions:\n")
-		flag.PrintDefaults()
-	}
-
 	if len(os.Args) < 2 {
 		flag.Usage()
 		os.Exit(1)
 	}
 
-	// Extract subcommand
 	subcmd := os.Args[1]
 
-	// Parse global flags only for commands that use them
 	if globalCommands[subcmd] {
 		os.Args = append([]string{os.Args[0]}, os.Args[2:]...)
 		flag.Parse()
@@ -70,14 +54,15 @@ func main() {
 		}
 	case "run":
 		fs := flag.NewFlagSet("run", flag.ExitOnError)
-		goal := fs.String("goal", "", "Task goal (required)")
-		project := fs.String("project", "", "Project ID (auto-created if empty)")
+		goal := fs.String("goal", "", "Task goal (required unless --project)")
+		project := fs.String("project", "", "Existing project name or ID")
+		detach := fs.Bool("detach", false, "Run in background, don't stream logs")
 		fs.Parse(os.Args[2:])
-		if *goal == "" {
-			fs.Usage()
+		if *goal == "" && *project == "" {
+			fmt.Fprintln(os.Stderr, "Usage: acactl run -goal <text> [-project <name>] [--detach]")
 			os.Exit(1)
 		}
-		if err := commands.Run(ports[2], *goal, *project); err != nil {
+		if err := commands.Run(ports[2], *goal, *project, *detach); err != nil {
 			fmt.Fprintf(os.Stderr, "error: %v\n", err)
 			os.Exit(1)
 		}
@@ -95,27 +80,93 @@ func main() {
 		follow := fs.Bool("follow", false, "follow streaming output")
 		raw := fs.Bool("raw", false, "output raw stream-json")
 		fs.Parse(os.Args[2:])
-		taskID := fs.Arg(0)
-		if taskID == "" {
-			fmt.Fprintln(os.Stderr, "Usage: acactl logs <task-id> [--follow] [--raw]")
+		arg := fs.Arg(0)
+		if arg == "" {
+			fmt.Fprintln(os.Stderr, "Usage: acactl logs <task-id|project-name-or-id> [--follow] [--raw]")
 			os.Exit(1)
 		}
-		if err := commands.Logs(ports[2], taskID, *follow, *raw); err != nil {
-			fmt.Fprintf(os.Stderr, "error: %v\n", err)
-			os.Exit(1)
+		// Determine if arg is a task ID or project name
+		if strings.HasPrefix(arg, "task_") || strings.HasPrefix(arg, "proj_") {
+			if strings.HasPrefix(arg, "proj_") {
+				// Project ID: show all tasks in project
+				if err := commands.ProjectLogs(ports[2], arg); err != nil {
+					fmt.Fprintf(os.Stderr, "error: %v\n", err)
+					os.Exit(1)
+				}
+			} else {
+				// Task ID
+				if err := commands.Logs(ports[2], arg, *follow, *raw); err != nil {
+					fmt.Fprintf(os.Stderr, "error: %v\n", err)
+					os.Exit(1)
+				}
+			}
+		} else {
+			// Try as project name first, then as task
+			if err := commands.ProjectLogs(ports[2], arg); err != nil {
+				fmt.Fprintf(os.Stderr, "error: %v\n", err)
+				os.Exit(1)
+			}
 		}
 	case "project":
-		fs := flag.NewFlagSet("project", flag.ExitOnError)
-		name := fs.String("name", "", "project name")
-		desc := fs.String("description", "", "project description")
-		fs.Parse(os.Args[2:])
-		if err := commands.CreateProject(ports[2], *name, *desc); err != nil {
-			fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		sub := ""
+		var projName, projDesc string
+		if len(os.Args) > 2 {
+			sub = os.Args[2]
+		}
+		// Manual flag parsing for project subcommands
+		for i := 3; i < len(os.Args); i++ {
+			switch os.Args[i] {
+			case "-name":
+				if i+1 < len(os.Args) {
+					projName = os.Args[i+1]
+					i++
+				}
+			case "-description":
+				if i+1 < len(os.Args) {
+					projDesc = os.Args[i+1]
+					i++
+				}
+			}
+		}
+		switch sub {
+		case "list", "":
+			if err := commands.ProjectList(ports[2]); err != nil {
+				fmt.Fprintf(os.Stderr, "error: %v\n", err)
+				os.Exit(1)
+			}
+		case "create":
+			if projName == "" {
+				fmt.Fprintln(os.Stderr, "Usage: acactl project create -name <name> -description <desc>")
+				os.Exit(1)
+			}
+			if err := commands.ProjectCreate(ports[2], projName, projDesc); err != nil {
+				fmt.Fprintf(os.Stderr, "error: %v\n", err)
+				os.Exit(1)
+			}
+		case "stop":
+			if projName == "" {
+				fmt.Fprintln(os.Stderr, "Usage: acactl project stop -name <name>")
+				os.Exit(1)
+			}
+			if err := commands.ProjectStop(ports[2], projName); err != nil {
+				fmt.Fprintf(os.Stderr, "error: %v\n", err)
+				os.Exit(1)
+			}
+		case "resume":
+			if projName == "" {
+				fmt.Fprintln(os.Stderr, "Usage: acactl project resume -name <name>")
+				os.Exit(1)
+			}
+			if err := commands.ProjectResume(ports[2], projName); err != nil {
+				fmt.Fprintf(os.Stderr, "error: %v\n", err)
+				os.Exit(1)
+			}
+		default:
+			fmt.Fprintf(os.Stderr, "Usage: acactl project [list|create|stop|resume]\n")
 			os.Exit(1)
 		}
 	default:
 		fmt.Fprintf(os.Stderr, "unknown command: %s\n", subcmd)
-		flag.Usage()
 		os.Exit(1)
 	}
 }

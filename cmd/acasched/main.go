@@ -22,6 +22,7 @@ func main() {
 	skillsDir := flag.String("skills", "skills", "skills directory")
 	logDir := flag.String("log-dir", "", "task log directory (default: ~/.aca/logs/tasks/)")
 	registryPath := flag.String("registry", "prompts/_mcp-registry.yaml", "MCP registry path")
+	envFile := flag.String("env", ".env", "path to .env file with LLM API keys")
 	flag.Parse()
 
 	s, err := store.NewStore(*dbPath)
@@ -44,6 +45,7 @@ func main() {
 		PromptsDir: *promptsDir,
 		SkillsDir:  *skillsDir,
 		LogDir:     *logDir,
+		EnvFile:    *envFile,
 		Registry:   registry,
 		Squads:     squads,
 	}

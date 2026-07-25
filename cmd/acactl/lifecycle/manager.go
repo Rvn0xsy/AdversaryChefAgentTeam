@@ -10,12 +10,15 @@ import (
 )
 
 type Service struct {
-	Name    string
-	Port    int
-	Binary  string
-	Args    []string
-	Podman  bool // if true, use podman instead of binary
-	cmd     *exec.Cmd
+	Name      string
+	Port      int
+	Binary    string
+	Args      []string
+	Mounts    []string // docker -v mounts, e.g. "/host/path:/container/path"
+	Env       []string // docker -e env vars, e.g. "SCHEDULER_URL=..."
+	CapAdd    []string // docker --cap-add, e.g. "NET_RAW" (kali needs this)
+	Container bool     // if true, use docker container instead of binary
+	cmd       *exec.Cmd
 }
 
 type ProcessManager struct {
@@ -37,8 +40,8 @@ func (pm *ProcessManager) BuildBinary(modulePath string, outputPath string) erro
 }
 
 func (pm *ProcessManager) Start(svc *Service) error {
-	if svc.Podman {
-		return pm.startPodman(svc)
+	if svc.Container {
+		return pm.startContainer(svc)
 	}
 	svc.cmd = exec.Command(svc.Binary, svc.Args...)
 	logFile, _ := os.Create(pm.LogDir + "/" + svc.Name + ".log")
@@ -51,24 +54,33 @@ func (pm *ProcessManager) Start(svc *Service) error {
 	return nil
 }
 
-func (pm *ProcessManager) startPodman(svc *Service) error {
-	// podman run -d --name <Name> --cap-add NET_RAW ... -p <Port>:<Port> <image>
-	args := []string{"run", "-d", "--name", svc.Name,
-		"--cap-add", "NET_RAW", "--cap-add", "NET_ADMIN",
-		"--sysctl", "net.ipv6.conf.all.disable_ipv6=0",
-		"-p", fmt.Sprintf("%d:%d", svc.Port, svc.Port),
-		svc.Binary,
+func (pm *ProcessManager) startContainer(svc *Service) error {
+	// docker run -d --name <Name> [mounts...] -p <Port>:<Port> <image> [args...]
+	args := []string{"run", "-d", "--name", svc.Name}
+	for _, m := range svc.Mounts {
+		args = append(args, "-v", m)
 	}
-	cmd := exec.Command("podman", args...)
+	for _, cap := range svc.CapAdd {
+		args = append(args, "--cap-add", cap)
+	}
+	for _, e := range svc.Env {
+		args = append(args, "-e", e)
+	}
+	if svc.Port > 0 {
+		args = append(args, "-p", fmt.Sprintf("%d:%d", svc.Port, svc.Port))
+	}
+	args = append(args, svc.Binary)
+	args = append(args, svc.Args...)
+	cmd := exec.Command("docker", args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	return cmd.Run()
 }
 
 func (pm *ProcessManager) Stop(svc *Service) error {
-	if svc.Podman {
-		exec.Command("podman", "stop", svc.Name).Run()
-		exec.Command("podman", "rm", svc.Name).Run()
+	if svc.Container {
+		exec.Command("docker", "stop", svc.Name).Run()
+		exec.Command("docker", "rm", svc.Name).Run()
 		return nil
 	}
 	pid, _ := ReadPID(pm.PidDir, svc.Name)

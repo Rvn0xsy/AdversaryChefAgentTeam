@@ -6,9 +6,11 @@ description: Kali Linux tool orchestration via kali-mcp. Routes reconnaissance t
 # Kali Toolkit
 
 > **Purpose**: Match reconnaissance tasks to the correct tool playbook and enforce tool escalation boundaries.
-> **Requires**: kali-mcp (exec, get_job), asset-mcp (create_clue, create_asset, update_asset)
+> **Requires**: kali-mcp (exec, job_wait, get_job, list_jobs, kill_job), asset-mcp (create_clue, create_asset, update_asset)
 > **Input**: Task description + target + project_id
 > **Output**: Executed playbook results recorded to asset-mcp
+
+Always route via `exec` → `job_wait`. Never poll `get_job` in a loop; `job_wait` blocks server-side until completion, costing only 1 turn.
 
 ## Playbooks
 

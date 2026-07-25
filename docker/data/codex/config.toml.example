@@ -1,7 +1,0 @@
-# Codex cc-switch configuration
-# Rename to config.toml and fill in actual values
-
-[provider.custom]
-url = "https://cc-switch.example.com/v1/chat/completions"
-api_key = "YOUR_CC_SWITCH_API_KEY"
-model = "deepseek-v4-pro"

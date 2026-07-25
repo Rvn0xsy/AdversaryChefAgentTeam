@@ -42,31 +42,17 @@ services:
       timeout: 3s
       retries: 3
 
-  acasched:
+  # goose worker image — acasched spins up ephemeral containers via `docker run`
+  goose:
     build:
       context: ..
-      dockerfile: docker/acasched/Dockerfile
-    ports:
-      - "9090:9090"
-    command:
-      - "-db"
-      - "/data/acasched.db"
-      - "-nexus-mcp"
-      - "http://nexus-mcp:8081"
-      - "-kali-mcp"
-      - "http://kali-mcp:8080"
-      - "-mythic-mcp"
-      - "http://mythic-mcp:8082"
-      - "-prompts"
-      - "/prompts"
-    volumes:
-      - acasched-data:/data
-      - ./prompts:/prompts:ro
-    depends_on:
-      - nexus-mcp
-      - kali-mcp
-      - mythic-mcp
+      dockerfile: docker/goose/Dockerfile
+    image: goose:latest
+    environment:
+      - GOOSE_DISABLE_KEYRING=1
+    entrypoint: ["goose"]
+    profiles:
+      - build-only
 
 volumes:
   nexus-data:
-  acasched-data:

@@ -256,3 +256,60 @@ func (s *Store) GetProject(id string) (*Project, error) {
 	p.CreatedAt, _ = time.Parse(time.RFC3339, ct)
 	return &p, nil
 }
+
+func (s *Store) ListProjects() ([]Project, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	rows, err := s.db.Query(`SELECT id, name, description, status, created_at FROM projects ORDER BY created_at DESC`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var projects []Project
+	for rows.Next() {
+		var p Project
+		var ct string
+		if err := rows.Scan(&p.ID, &p.Name, &p.Description, &p.Status, &ct); err != nil {
+			return nil, err
+		}
+		p.CreatedAt, _ = time.Parse(time.RFC3339, ct)
+		projects = append(projects, p)
+	}
+	return projects, nil
+}
+
+func (s *Store) UpdateProject(id, name, description, status string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	query := "UPDATE projects SET name=?, description=?, status=? WHERE id=?"
+	_, err := s.db.Exec(query, name, description, status, id)
+	return err
+}
+
+func (s *Store) ListTasksByProject(projectID string) ([]Task, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	rows, err := s.db.Query(
+		`SELECT id, project_id, parent_id, agent, status, title, description, result, error, created_by, max_turns, timeout_secs, retry_count, attempt, created_at FROM tasks WHERE project_id = ? ORDER BY created_at ASC`,
+		projectID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var tasks []Task
+	for rows.Next() {
+		var t Task
+		var ct string
+		if err := rows.Scan(&t.ID, &t.ProjectID, &t.ParentID, &t.Agent, &t.Status, &t.Title, &t.Description, &t.Result, &t.Error, &t.CreatedBy, &t.MaxTurns, &t.TimeoutSecs, &t.RetryCount, &t.Attempt, &ct); err != nil {
+			return nil, err
+		}
+		t.CreatedAt, _ = time.Parse(time.RFC3339, ct)
+		tasks = append(tasks, t)
+	}
+	return tasks, nil
+}

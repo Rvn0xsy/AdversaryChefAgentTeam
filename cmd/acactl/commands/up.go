@@ -34,31 +34,29 @@ func Up(dataDir, projectRoot string, ports [3]int) error {
 	}
 
 	nexusPort, kaliPort, acaPort := ports[0], ports[1], ports[2]
-	nexusDB := filepath.Join(pm.DataDir, "nexus.db")
 	acaschedDB := filepath.Join(pm.DataDir, "acasched.db")
 	logDir := filepath.Join(pm.LogDir, "tasks")
 
-	// Build binaries
-	fmt.Println("Building nexus-mcp...")
-	if err := pm.BuildBinary("./servers/nexus/cmd/server", filepath.Join(pm.BinDir, "nexus-mcp")); err != nil {
-		return fmt.Errorf("build nexus-mcp: %w", err)
-	}
+	// Build binaries (acasched only, mcp services use Docker)
 	fmt.Println("Building acasched...")
 	if err := pm.BuildBinary("./cmd/acasched", filepath.Join(pm.BinDir, "acasched")); err != nil {
 		return fmt.Errorf("build acasched: %w", err)
 	}
 
-	// Check kali-mcp image
-	fmt.Println("Checking kali-mcp image...")
-	// podman image exists kali-mcp
+	// Check Docker images exist
+	fmt.Println("Checking Docker images...")
+	// docker images exist: nexus-mcp, kali-mcp, goose
 
-	// Start nexus-mcp
+	// Start nexus-mcp (Docker)
 	fmt.Println("Starting nexus-mcp...")
 	nexus := &lifecycle.Service{
-		Name:   "nexus-mcp",
-		Port:   nexusPort,
-		Binary: filepath.Join(pm.BinDir, "nexus-mcp"),
-		Args:   []string{"-db", nexusDB},
+		Name:      "nexus-mcp",
+		Port:      nexusPort,
+		Binary:    "nexus-mcp",
+		Args:      []string{"-db", "/data/nexus.db"},
+		Mounts:    []string{pm.DataDir + ":/data"},
+		Env:       []string{"SCHEDULER_URL=http://host.docker.internal:9090"},
+		Container: true,
 	}
 	if err := pm.Start(nexus); err != nil {
 		return fmt.Errorf("start nexus-mcp: %w", err)
@@ -70,10 +68,11 @@ func Up(dataDir, projectRoot string, ports [3]int) error {
 	// Start kali-mcp
 	fmt.Println("Starting kali-mcp...")
 	kali := &lifecycle.Service{
-		Name:   "kali-mcp",
-		Port:   kaliPort,
-		Binary: "kali-mcp",
-		Podman: true,
+		Name:      "kali-mcp",
+		Port:      kaliPort,
+		Binary:    "kali-mcp",
+		CapAdd:    []string{"NET_RAW", "NET_ADMIN", "SYS_PTRACE"},
+		Container: true,
 	}
 	if err := pm.Start(kali); err != nil {
 		return fmt.Errorf("start kali-mcp: %w", err)
@@ -93,6 +92,7 @@ func Up(dataDir, projectRoot string, ports [3]int) error {
 			"-prompts", filepath.Join(projectRoot, "prompts"),
 			"-skills", filepath.Join(projectRoot, "skills"),
 			"-registry", filepath.Join(projectRoot, "prompts", "_mcp-registry.yaml"),
+			"-env", filepath.Join(projectRoot, ".env"),
 			"-log-dir", logDir,
 		},
 	}

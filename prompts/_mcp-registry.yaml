@@ -1,10 +1,11 @@
 # MCP Registry — maps MCP names to URLs
 # Runner reads this to resolve agent "Requires" declarations.
-# Supports both local (http://127.0.0.1) and internet (https://api.example.com) MCPs.
+# Uses host.docker.internal for macOS Docker Desktop compatibility
+# (containers can't reach host-localhost via 127.0.0.1 on macOS)
 
-nexus-mcp:  "http://127.0.0.1:8081"
-kali-mcp:   "http://127.0.0.1:8080"
-mythic-mcp: "http://127.0.0.1:8082"
+nexus-mcp:  "http://host.docker.internal:8081"
+kali-mcp:   "http://host.docker.internal:8080"
+mythic-mcp: "http://host.docker.internal:8082"
 
 # Internet MCP examples (uncomment when needed):
 # shodan-mcp:      "https://api.shodan.io/mcp"

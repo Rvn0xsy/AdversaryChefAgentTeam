@@ -20,7 +20,7 @@ func Down(dataDir string, ports [3]int) error {
 
 	services := []*lifecycle.Service{
 		{Name: "acasched", Port: ports[2]},
-		{Name: "kali-mcp", Port: ports[1], Podman: true},
+		{Name: "kali-mcp", Port: ports[1], Container: true},
 		{Name: "nexus-mcp", Port: ports[0]},
 	}
 

@@ -1,6 +1,7 @@
 package goose
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"fmt"
@@ -18,6 +19,7 @@ type Runner struct {
 	PromptsDir string                 // e.g., "prompts"
 	SkillsDir  string                 // e.g., "skills"
 	LogDir     string
+	EnvFile    string                 // path to .env file with API keys
 	Registry   map[string]string      // loaded from _mcp-registry.yaml
 	Squads     map[string]SquadConfig // loaded from _squads.yaml
 }
@@ -97,6 +99,12 @@ func (r *Runner) Execute(ctx context.Context, task *store.Task) (*Result, error)
 		skillName := filepath.Base(skill)
 		containerPath := "/root/.agents/skills/" + skillName
 		args = append(args, "-v", hostPath+":"+containerPath+":ro")
+	}
+
+	// Read .env file and pass as container environment variables
+	envVars := loadEnvFile(r.EnvFile)
+	for _, kv := range envVars {
+		args = append(args, "-e", kv)
 	}
 
 	// Append goose image and goose run subcommand
@@ -179,4 +187,28 @@ type Result struct {
 	Status  string
 	Summary string
 	Output  string
+}
+
+// loadEnvFile reads a .env-style file and returns "KEY=VALUE" pairs.
+// Lines starting with # and empty lines are skipped.
+func loadEnvFile(path string) []string {
+	if path == "" {
+		return nil
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil
+	}
+	var pairs []string
+	scanner := bufio.NewScanner(strings.NewReader(string(data)))
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		if strings.Contains(line, "=") {
+			pairs = append(pairs, line)
+		}
+	}
+	return pairs
 }

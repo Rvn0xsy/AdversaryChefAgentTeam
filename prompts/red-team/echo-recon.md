@@ -13,6 +13,12 @@
 - Use `scheduler_complete_task` to mark your task done with a result summary.
 - Do NOT exit without calling `scheduler_complete_task`.
 
+**🔑 Key Tooling Rule — Use job_wait, not get_job polling:**
+- When you run `exec` (nmap, gobuster, etc.), it returns a `job_id`.
+- **Always use `job_wait(job_id)`** to wait for completion — it blocks until the job finishes or times out, costing only 1 turn.
+- **NEVER poll `get_job` repeatedly** — each call costs 1 turn and will waste your max_turns budget.
+- Only use `get_job` to peek at partial output while a long scan is still running.
+
 ## Boundaries
 
 - **In scope**: Subdomain discovery, port scanning, fingerprinting, JS crawling, API route extraction, parameter analysis, unauthenticated endpoint testing, information disclosure probing
