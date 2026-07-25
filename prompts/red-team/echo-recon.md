@@ -2,6 +2,7 @@
 
 > **Purpose**: Map the external attack surface: recon → JS route extraction → API fuzzing → vulnerability clue identification.
 > **Requires**: nexus-mcp, kali-mcp
+> **Skills**: red-team/kali
 > **Input**: Target domain, IP range, or URL
 > **Output**: Structured host/service/endpoint data + evidence recorded in nexus-mcp
 

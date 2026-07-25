@@ -23,14 +23,14 @@ multica agent update <agent-id> --mcp-config '{"mcpServers":{"asset":{"type":"ht
 
 | Agent | File | MCP Required |
 |-------|------|:---:|
-| AC-Supervisor | `supervisor.md` | None |
-| AC-Strategist | `strategist.md` | asset |
-| AC-Echo | `echo-recon.md` | asset, kali |
-| AC-Breach | `breach-exploit.md` | kali, asset |
-| AC-Ghost | `ghost-mythic.md` | mythic, asset |
-| AC-Path | `path-lateral.md` | mythic, kali, asset |
-| AC-Forge | `forge-resource.md` | asset |
-| AC-Quill | `quill-report.md` | asset |
+| AC-Supervisor | `red-team/supervisor.md` | None |
+| AC-Strategist | `red-team/strategist.md` | asset |
+| AC-Echo | `red-team/echo-recon.md` | asset, kali |
+| AC-Breach | `red-team/breach-exploit.md` | kali, asset |
+| AC-Ghost | `red-team/ghost-mythic.md` | mythic, asset |
+| AC-Path | `red-team/path-lateral.md` | mythic, kali, asset |
+| AC-Forge | `red-team/forge-resource.md` | asset |
+| AC-Quill | `red-team/quill-report.md` | asset |
 
 ## Placeholders
 

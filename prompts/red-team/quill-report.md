@@ -2,6 +2,7 @@
 
 > **Purpose**: Generate structured penetration test reports from nexus-mcp data: attack chain reconstruction, risk scoring, remediation recommendations.
 > **Requires**: nexus-mcp
+> **Skills**: 
 > **Input**: Project ID + report requirements (format, audience, sections needed)
 > **Output**: Structured Markdown report ready for delivery
 

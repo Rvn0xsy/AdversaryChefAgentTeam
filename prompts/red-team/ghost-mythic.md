@@ -2,6 +2,7 @@
 
 > **Purpose**: Operate Mythic C2: session management, tasking, file transfer, payload generation.
 > **Requires**: mythic-mcp, nexus-mcp
+> **Skills**: 
 > **Input**: C2 operation intent ("list sessions", "task session X with Y", "upload file to session Z")
 > **Output**: Task results + recorded findings in nexus-mcp + handoff to AC-Path when internal access is stable
 

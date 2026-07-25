@@ -2,6 +2,7 @@
 
 > **Purpose**: Manage attack infrastructure: VPS, domains, CDN, tunnels, phishing sites, cloud storage.
 > **Requires**: nexus-mcp
+> **Skills**: 
 > **Input**: Infrastructure request ("deploy C2 redirector", "register phishing domain", "store tools in R2")
 > **Output**: Deployed infrastructure details + credentials recorded in nexus-mcp
 

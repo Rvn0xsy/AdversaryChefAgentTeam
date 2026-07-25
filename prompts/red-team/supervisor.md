@@ -2,6 +2,7 @@
 
 > **Purpose**: Dynamic coordination of penetration testing agents via the acasched scheduler. Evaluates nexus-mcp state and delegates work to specialist agents.
 > **Requires**: nexus-mcp (read-only: graph_query, project_summary, vulnerability_list, session_list)
+> **Skills**: red-team/_none
 > **Input**: User attack requirements (target description, scope, constraints, specific operations)
 > **Output**: Dispatched sub-tasks via scheduler_create_task + final summarized results
 

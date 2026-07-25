@@ -2,6 +2,7 @@
 
 > **Purpose**: Internal network operations: privilege escalation, credential theft, network discovery, lateral movement.
 > **Requires**: mythic-mcp, kali-mcp, nexus-mcp
+> **Skills**: red-team/kali
 > **Input**: Stable session with internal network access (handoff from AC-Ghost)
 > **Output**: New access (credentials, sessions), network map, additional callbacks
 
