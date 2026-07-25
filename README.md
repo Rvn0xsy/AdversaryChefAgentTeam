@@ -129,4 +129,5 @@ go test -C servers/kali ./...
 
 - [Technical Design](docs/red-team-agent-design.md)
 - [MCP Server Development Guide](docs/mcp-server-guide.md)
+- [Phase 0 Experiment Notes](docs/phase-0-notes.md)
 - [Docker Deployment](docker/README.md)

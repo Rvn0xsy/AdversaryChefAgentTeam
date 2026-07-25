@@ -14,3 +14,22 @@
 - servers/kali 端口 8080，servers/asset 端口 8081
 - kali 的 job.Manager 有 DefaultMaxOutput=500_000 和 DefaultTimeout=30min 常量
 
+## Phase 0 关键经验
+
+### MCP 传输协议
+- 必须用 `mcp.NewStreamableHTTPHandler` (2025-03-26 spec, Mcp-Session-Id header)
+- 不能用 `mcp.NewSSEHandler` (2024 spec, ?sessionid= query param)
+- Agent MCP 配置格式: `{"mcpServers":{"name":{"type":"http","url":"http://127.0.0.1:PORT"}}}`
+- `type` 是 "http" 不是 "sse"
+
+### Docker
+- docker.1ms.run 官方镜像需要 /library/ 前缀: `docker.1ms.run/library/golang:1.26-alpine`
+- go.mod 修改后必须 --no-cache 重建
+- replace 指向的本地包 (pkg/) 必须在 go mod download 之前 COPY
+- kalilinux/kali-rolling 镜像站未同步，需从 Docker Hub 直拉
+
+### Multica
+- daemon 只在启动时扫描 PATH，安装新 runtime 后必须 `multica daemon restart`
+- per-task CODEX_HOME 会保留用户原有的 [model_providers] 配置，不会覆盖
+- daemon 用户 (dev) 的 ~/.codex/config.toml 必须存在且指向 cc-switch proxy
+

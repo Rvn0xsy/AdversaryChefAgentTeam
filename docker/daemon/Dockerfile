@@ -1,26 +1,23 @@
-FROM ubuntu:24.04
+FROM docker.1ms.run/ubuntu:24.04
 
-# 基础依赖
+# Install Multica CLI
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    ca-certificates curl git nodejs npm \
+    ca-certificates curl nodejs npm \
     && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && npm install -g multica
 
-# 安装 Codex CLI
-# 注意：需要替换为实际的 Codex Linux 安装命令
-ARG CODEX_VERSION=latest
-RUN curl -fsSL https://get.codex.openai.com | sh -s -- --version ${CODEX_VERSION}
+# Copy Codex binary and cc-switch
+COPY codex /usr/local/bin/codex
+COPY cc-switch /usr/local/bin/cc-switch
 
-# 安装 Multica Daemon
-# 注意：需要替换为实际的 Multica daemon 安装命令
-RUN npm install -g multica
+# Copy config templates
+COPY config.toml /root/.codex/config.toml
 
-# 持久化目录
-RUN mkdir -p /root/.multica /root/.codex /workspace
+# Copy workspace skills
+COPY skills/ /root/.multica/skills/
 
-# Codex cc-switch 配置模板
-COPY config/codex/config.toml /root/.codex/config.toml
-COPY config/codex/cc-switch-model-catalog.json /root/.codex/cc-switch-model-catalog.json
-
+RUN mkdir -p /workspace
 WORKDIR /workspace
-ENTRYPOINT ["multica", "daemon"]
+
+ENTRYPOINT ["multica", "daemon", "start", "--foreground"]

@@ -3,6 +3,7 @@ module adversarychef/asset
 go 1.26.4
 
 require (
+	adversarychef/mcputil v0.0.0
 	github.com/modelcontextprotocol/go-sdk v1.6.1
 	modernc.org/sqlite v1.54.0
 )
@@ -23,3 +24,5 @@ require (
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.11.0 // indirect
 )
+
+replace adversarychef/mcputil => ../../pkg/mcputil

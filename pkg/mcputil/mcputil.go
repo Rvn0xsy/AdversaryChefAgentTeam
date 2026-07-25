@@ -77,13 +77,15 @@ func Run(cfg ServerConfig, register func(*mcp.Server)) error {
 
 	register(server)
 
-	sseHandler := mcp.NewSSEHandler(func(r *http.Request) *mcp.Server {
+	handler := mcp.NewStreamableHTTPHandler(func(r *http.Request) *mcp.Server {
 		return server
-	}, nil)
+	}, &mcp.StreamableHTTPOptions{
+		SessionTimeout: 5 * time.Minute,
+	})
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", healthHandler(cfg))
-	mux.Handle("/", sseHandler)
+	mux.Handle("/", handler)
 
 	wrapped := withMiddleware(mux)
 
