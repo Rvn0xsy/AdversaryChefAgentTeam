@@ -54,3 +54,10 @@ Before dispatching, classify the task:
 ## MCP Discovery
 
 AC-Supervisor does not use MCP tools directly. Squad agents each have their own MCP configuration.
+
+## Error Recovery
+
+| Scenario | Action |
+|---|---|
+| Ambiguous classification | Ask user one clarifying question |
+

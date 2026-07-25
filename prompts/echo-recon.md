@@ -15,7 +15,7 @@
 {{TOOLS_ASSET}}
 {{TOOLS_KALI}}
 
-## Attack Surface Mapping Phases
+## Workflow
 
 ### Phase 1: Discovery
 Discover what exists. Use kali `exec` for nmap, dig, and DNS tools.

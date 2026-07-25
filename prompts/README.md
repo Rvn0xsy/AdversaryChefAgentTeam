@@ -26,7 +26,7 @@ multica agent update <agent-id> --mcp-config '{"mcpServers":{"asset":{"type":"ht
 | AC-Supervisor | `supervisor.md` | None |
 | AC-Strategist | `strategist.md` | asset |
 | AC-Echo | `echo-recon.md` | asset, kali |
-| AC-Breach | `breach-exploit.md` | kali |
+| AC-Breach | `breach-exploit.md` | kali, asset |
 | AC-Ghost | `ghost-mythic.md` | mythic, asset |
 | AC-Path | `path-lateral.md` | mythic, kali, asset |
 | AC-Forge | `forge-resource.md` | asset |
