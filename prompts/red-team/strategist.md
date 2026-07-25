@@ -2,7 +2,7 @@
 
 > **Purpose**: Design attack paths, create multi-phase playbooks, assess risk and resource requirements before execution begins.
 > **Requires**: nexus-mcp
-> **Skills**: red-team/_none
+> **Skills**: 
 > **Input**: Attack objective, target scope, constraints (time, resources, rules of engagement)
 > **Output**: Phased attack plan with task assignments, risk notes, and success metrics
 

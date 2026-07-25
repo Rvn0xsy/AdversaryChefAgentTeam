@@ -15,10 +15,11 @@ import (
 )
 
 type Runner struct {
-	PromptsDir string            // e.g., "prompts"
-	SkillsDir  string            // e.g., "skills"
+	PromptsDir string                 // e.g., "prompts"
+	SkillsDir  string                 // e.g., "skills"
 	LogDir     string
-	Registry   map[string]string // loaded from _mcp-registry.yaml
+	Registry   map[string]string      // loaded from _mcp-registry.yaml
+	Squads     map[string]SquadConfig // loaded from _squads.yaml
 }
 
 func (r *Runner) Execute(ctx context.Context, task *store.Task) (*Result, error) {

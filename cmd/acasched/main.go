@@ -5,6 +5,7 @@ import (
 	"flag"
 	"log"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
@@ -34,11 +35,17 @@ func main() {
 		log.Fatalf("load MCP registry: %v", err)
 	}
 
+	squads, err := goose.LoadSquads(filepath.Join(*promptsDir, "_squads.yaml"))
+	if err != nil {
+		log.Fatalf("load squads: %v", err)
+	}
+
 	runner := &goose.Runner{
 		PromptsDir: *promptsDir,
 		SkillsDir:  *skillsDir,
 		LogDir:     *logDir,
 		Registry:   registry,
+		Squads:     squads,
 	}
 
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
