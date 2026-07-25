@@ -38,15 +38,18 @@ func (d *Dispatcher) tick() {
 		log.Printf("dispatcher: list pending: %v", err)
 		return
 	}
+	log.Printf("dispatcher: tick: %d pending tasks", len(tasks))
 	for _, t := range tasks {
 		if t.ParentID != "" && !d.parentReady(t.ParentID) {
 			continue
 		}
+		log.Printf("dispatcher: dispatching %s (agent=%s)", t.ID, t.Agent)
 		go d.dispatchOne(t)
 	}
 }
 
 func (d *Dispatcher) dispatchOne(task store.Task) {
+	log.Printf("dispatcher: dispatching task %s (agent=%s)", task.ID, task.Agent)
 	TransitionToDispatched(d.store, task.ID)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(task.TimeoutSecs)*time.Second)
 	d.running[task.ID] = cancel
@@ -56,8 +59,10 @@ func (d *Dispatcher) dispatchOne(task store.Task) {
 	}()
 
 	TransitionToRunning(d.store, task.ID)
+	log.Printf("dispatcher: running goose for %s", task.ID)
 	result, err := d.runner.Execute(ctx, &task)
 	if err != nil {
+		log.Printf("dispatcher: goose error for %s: %v", task.ID, err)
 		if ctx.Err() == context.DeadlineExceeded {
 			TransitionToTimeout(d.store, task.ID)
 		} else if task.Attempt < task.RetryCount {
