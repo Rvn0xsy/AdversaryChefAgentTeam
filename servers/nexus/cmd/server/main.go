@@ -5,8 +5,8 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
-	"adversarychef/asset/internal/store"
-	"adversarychef/asset/internal/tools"
+	"adversarychef/nexus/internal/store"
+	"adversarychef/nexus/internal/tools"
 	"adversarychef/mcputil"
 )
 

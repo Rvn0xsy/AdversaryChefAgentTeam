@@ -9,7 +9,7 @@ import (
 
 	_ "modernc.org/sqlite"
 
-	"adversarychef/asset/internal/models"
+	"adversarychef/nexus/internal/models"
 )
 
 // SQLiteStore is a SQLite-backed persistent store implementation.

@@ -1,5 +1,5 @@
 package store
-import "adversarychef/asset/internal/models"
+import "adversarychef/nexus/internal/models"
 
 // Store is the data persistence interface; can be swapped for Postgres.
 type Store interface {

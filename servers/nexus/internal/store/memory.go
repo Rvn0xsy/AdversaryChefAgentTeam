@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"adversarychef/asset/internal/models"
+	"adversarychef/nexus/internal/models"
 )
 
 // MemoryStore is an in-memory store for development use.

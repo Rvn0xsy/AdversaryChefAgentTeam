@@ -1,7 +1,7 @@
 package tools
 import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
-	"adversarychef/asset/internal/store"
+	"adversarychef/nexus/internal/store"
 )
 
 // RegisterAll registers all CRUD tools + search + stats.

@@ -2,7 +2,7 @@ go 1.26.4
 
 use (
 	./pkg/mcputil
-	./servers/asset
 	./servers/kali
 	./servers/mythic
+	./servers/nexus
 )
