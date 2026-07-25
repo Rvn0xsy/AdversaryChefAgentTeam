@@ -37,8 +37,7 @@ prompts/supervisor.md                     # 修改：加 Tool Escalation Boundar
 scripts/update-nuclei-templates.sh        # 新增：拉取 + 合并 nuclei 模板
 
 .gitignore                                # 修改：加 data/nuclei-templates/
-docker/kali-mcp/Dockerfile                # 修改：加 VOLUME
-docker/docker-compose.yml                 # 修改：加字典和模板挂载
+docker/kali-mcp/Dockerfile                # 修改：加 COPY dictionaries + nuclei-templates
 ```
 
 ---
@@ -386,6 +385,8 @@ If an agent requests 🔴 escalation (e.g., "should I run nuclei?"), explicitly 
 
 ### `scripts/update-nuclei-templates.sh`
 
+构建镜像前的必要步骤。拉取官方 nuclei-templates + 合并自定义模板到 `data/nuclei-templates/`，之后 Dockerfile COPY 进镜像。
+
 ```bash
 #!/bin/bash
 # Update nuclei-templates from official repo + merge custom templates.
@@ -420,22 +421,23 @@ echo "[3/3] Done. $count templates available in $OFFICIAL_DIR"
 
 ---
 
-## 六、Docker 挂载
+## 六、Docker 镜像构建
 
 ### `docker/kali-mcp/Dockerfile` — 末尾加
 
 ```dockerfile
-VOLUME ["/root/nuclei-templates", "/data/dictionaries"]
+# Copy dictionaries (small, few KB)
+COPY data/dictionaries/ /data/dictionaries/
+
+# Clone and copy nuclei-templates (large, run update-nuclei-templates.sh first)
+COPY data/nuclei-templates/ /root/nuclei-templates/
 ```
 
-### `docker/docker-compose.yml` — kali-mcp 加
+**镜像构建前置条件**：构建镜像前必须先运行 `./scripts/update-nuclei-templates.sh` 确保 `data/nuclei-templates/` 存在。
 
-```yaml
-  kali-mcp:
-    volumes:
-      - ./data/nuclei-templates:/root/nuclei-templates:ro
-      - ./data/dictionaries:/data/dictionaries:ro
-```
+### `docker/docker-compose.yml` — 无需额外挂载
+
+字典和 nuclei 模板已封入镜像，不需要 volume 挂载。
 
 ---
 
