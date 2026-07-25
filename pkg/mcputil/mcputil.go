@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 
@@ -149,4 +150,38 @@ func withMiddleware(next http.Handler) http.Handler {
 		log.Printf("[%s] %s %s %v",
 			r.URL.Path, r.Method, r.URL.Path, time.Since(start))
 	})
+}
+
+// SessionBinding holds the project_id bound to an MCP session.
+type SessionBinding struct {
+	ProjectID string
+	Bound     bool
+	BoundAt   time.Time
+}
+
+// SessionMap provides concurrent-safe session-to-project binding.
+type SessionMap struct {
+	mu       sync.RWMutex
+	sessions map[string]*SessionBinding
+}
+
+// NewSessionMap creates a new empty SessionMap.
+func NewSessionMap() *SessionMap {
+	return &SessionMap{sessions: make(map[string]*SessionBinding)}
+}
+
+// GetOrBind retrieves the project_id for a session, binding it if first seen.
+// Returns an error if a different project_id attempts to reuse the same session.
+func (m *SessionMap) GetOrBind(sessionID, callerProjectID string) (string, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	s, exists := m.sessions[sessionID]
+	if !exists {
+		m.sessions[sessionID] = &SessionBinding{ProjectID: callerProjectID, Bound: true, BoundAt: time.Now()}
+		return callerProjectID, nil
+	}
+	if s.ProjectID != callerProjectID {
+		return "", fmt.Errorf("session %s bound to project %s, rejected %s", sessionID, s.ProjectID, callerProjectID)
+	}
+	return s.ProjectID, nil
 }

@@ -11,11 +11,16 @@ import (
 )
 
 func main() {
-	cfg := mcputil.ParseConfig("asset", "0.2.0", 8081)
+	cfg := mcputil.ParseConfig("nexus", "0.3.0", 8081)
 	s, err := store.NewSQLiteStore(cfg.DBPath)
 	if err != nil {
 		log.Fatalf("failed to open database: %v", err)
 	}
 	defer s.Close()
-	mcputil.Run(cfg, func(server *mcp.Server) { tools.RegisterAll(server, s) })
+
+	sessionMap := mcputil.NewSessionMap()
+
+	mcputil.Run(cfg, func(server *mcp.Server) {
+		tools.RegisterAll(server, s, sessionMap)
+	})
 }
