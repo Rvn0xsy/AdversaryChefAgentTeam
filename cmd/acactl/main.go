@@ -92,11 +92,15 @@ func main() {
 		}
 	case "logs":
 		fs := flag.NewFlagSet("logs", flag.ExitOnError)
-		taskID := fs.String("task", "", "task ID")
 		follow := fs.Bool("follow", false, "follow streaming output")
 		raw := fs.Bool("raw", false, "output raw stream-json")
 		fs.Parse(os.Args[2:])
-		if err := commands.Logs(ports[2], *taskID, *follow, *raw); err != nil {
+		taskID := fs.Arg(0)
+		if taskID == "" {
+			fmt.Fprintln(os.Stderr, "Usage: acactl logs <task-id> [--follow] [--raw]")
+			os.Exit(1)
+		}
+		if err := commands.Logs(ports[2], taskID, *follow, *raw); err != nil {
 			fmt.Fprintf(os.Stderr, "error: %v\n", err)
 			os.Exit(1)
 		}

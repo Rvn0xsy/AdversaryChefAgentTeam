@@ -10,65 +10,97 @@ import (
 )
 
 type StreamLine struct {
-	Type   string          `json:"type"`
-	Name   string          `json:"name,omitempty"`
-	Text   string          `json:"text,omitempty"`
-	Result string          `json:"result,omitempty"`
-	Params json.RawMessage `json:"params,omitempty"`
+	Type    string          `json:"type"`
+	Message *struct {
+		Content json.RawMessage `json:"content"`
+	} `json:"message,omitempty"`
 }
 
 func FormatStreamJSON(r io.Reader) error {
+	var textBuf strings.Builder
 	scanner := bufio.NewScanner(r)
+	flushText := func() {
+		t := strings.TrimSpace(textBuf.String())
+		if t != "" {
+			fmt.Printf("\n  ✦ %s\n\n", t)
+			textBuf.Reset()
+		}
+	}
 	for scanner.Scan() {
 		var line StreamLine
 		if err := json.Unmarshal(scanner.Bytes(), &line); err != nil {
 			continue
 		}
 		switch line.Type {
-		case "tool_call":
-			fmt.Printf("  ▸ [mcp] %s\n", line.Name)
-			if line.Params != nil {
-				printParams(line.Params)
+		case "message":
+			if line.Message != nil {
+				formatMessageContent(line.Message.Content, &textBuf, flushText)
 			}
-		case "tool_result":
-			printResult(line.Result)
-		case "assistant":
-			text := strings.TrimSpace(line.Text)
-			if text != "" {
-				fmt.Printf("\n  ✦ %s\n\n", wordWrap(text, 72))
-			}
+		case "complete":
+			flushText()
+			fmt.Println("  ✅ Completed")
 		}
 	}
+	flushText()
 	return nil
 }
 
-func printParams(raw json.RawMessage) {
-	var m map[string]interface{}
-	json.Unmarshal(raw, &m)
-	for k, v := range m {
-		fmt.Printf("    %s: %v\n", k, v)
+func formatMessageContent(raw json.RawMessage, textBuf *strings.Builder, flushText func()) {
+	var blocks []struct {
+		Type     string `json:"type"`
+		Text     string `json:"text"`
+		Thinking string `json:"thinking"`
+		ToolCall *struct {
+			Status string `json:"status"`
+			Value  struct {
+				Name      string                 `json:"name"`
+				Arguments map[string]interface{} `json:"arguments"`
+			} `json:"value"`
+		} `json:"toolCall,omitempty"`
+		ToolResponse *struct {
+			Status string `json:"status"`
+			Value  string `json:"value"`
+		} `json:"toolResponse,omitempty"`
+		Meta *struct {
+			GooseExtension string `json:"goose_extension"`
+		} `json:"_meta,omitempty"`
 	}
-}
-
-func printResult(raw string) {
-	lines := strings.Split(raw, "\n")
-	n := len(lines)
-	if n > 200 {
-		lines = lines[:200]
+	if err := json.Unmarshal(raw, &blocks); err != nil {
+		return
 	}
-	for _, l := range lines {
-		if strings.TrimSpace(l) != "" {
-			fmt.Printf("    %s\n", l)
+	for _, b := range blocks {
+		switch b.Type {
+		case "thinking":
+			// skip
+		case "text":
+			textBuf.WriteString(b.Text)
+		case "toolRequest":
+			flushText()
+			if b.ToolCall != nil {
+				server := ""
+				if b.Meta != nil {
+					server = b.Meta.GooseExtension
+				}
+				name := b.ToolCall.Value.Name
+				if idx := strings.Index(name, "__"); idx > 0 {
+					if server == "" {
+						server = name[:idx]
+					}
+					name = name[idx+2:]
+				}
+				fmt.Printf("  ▸ [%s] %s\n", server, name)
+				for k, v := range b.ToolCall.Value.Arguments {
+					fmt.Printf("    %s: %v\n", k, v)
+				}
+			}
+		case "toolResponse":
+			if b.ToolResponse != nil && b.ToolResponse.Value != "" {
+				val := b.ToolResponse.Value
+				if len(val) > 500 {
+					val = val[:500] + "..."
+				}
+				fmt.Printf("    → %s\n", val)
+			}
 		}
 	}
-	if n > 200 {
-		fmt.Printf("    [truncated, -%d lines]\n", n-200)
-	}
-}
-
-func wordWrap(s string, width int) string {
-	if len(s) <= width {
-		return s
-	}
-	return s[:width-3] + "..."
 }
