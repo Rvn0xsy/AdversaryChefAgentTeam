@@ -21,6 +21,6 @@ func main() {
 	sessionMap := mcputil.NewSessionMap()
 
 	mcputil.Run(cfg, func(server *mcp.Server) {
-		tools.RegisterAll(server, s, sessionMap)
+		tools.RegisterAllV2(server, s, sessionMap)
 	})
 }
