@@ -24,6 +24,13 @@ prompts/
 │   ├── asset.md                # asset-mcp 工具清单（28 tools）
 │   ├── kali.md                 # kali-mcp 工具清单（4 tools）
 │   └── mythic.md               # mythic-mcp 工具清单（14 tools）
+├── _tests/                     # 测试用例（粘贴到 Multica issue 验证）
+│   ├── echo-subdomains.md      # AC-Echo 子域名发现
+│   ├── echo-export-assets.md   # AC-Echo 资产入库
+│   ├── ghost-list-callbacks.md # AC-Ghost 回调列表
+│   ├── supervisor-route-recon.md   # Supervisor 应分派给 AC-Echo
+│   ├── supervisor-route-c2.md      # Supervisor 应直接给 AC-Ghost
+│   └── chain-echo-to-breach.md     # AC-Echo → AC-Breach 手递手
 ├── supervisor.md               # AC-Supervisor — 任务分类 + squad 分派
 ├── strategist.md               # AC-Strategist — 攻击路径设计
 ├── echo-recon.md               # AC-Echo — 外网侦察→路由提取→接口验证
@@ -299,51 +306,64 @@ scripts/
 └── validate-prompts.sh       # 检查占位符是否全部替换（未来）
 ```
 
-### 5.2 `expand-tools.sh`
+### 5.2 `expand-tools.sh`（通用版）
+
+不再硬编码 MCP 名称。自动扫描 prompt 中的 `{{TOOLS_*}}` 占位符，匹配 `_tools/*.md` 展开：
 
 ```bash
 #!/bin/bash
 # Usage: ./scripts/expand-tools.sh <prompt-file>
-# Replaces {{TOOLS_ASSET}}, {{TOOLS_KALI}}, {{TOOLS_MYTHIC}} with content from prompts/_tools/
-# Outputs to stdout. Works on macOS (bash 3.2+) and Linux.
+# Auto-discovers all {{TOOLS_*}} placeholders and expands them
+# from prompts/_tools/<name>.md. Works on macOS (bash 3.2+) and Linux.
 
 set -euo pipefail
 
 PROMPTS_DIR="$(cd "$(dirname "$0")/../prompts" && pwd)"
 
-expand() {
-    local content="$1"
-    local placeholder="$2"
-    local tool_file="$3"
-    local tool_content
-    tool_content=$(cat "$PROMPTS_DIR/_tools/$tool_file")
-    echo "${content//$placeholder/$tool_content}"
-}
-
 input=$(cat "$1")
-input=$(expand "$input" "{{TOOLS_ASSET}}" "asset.md")
-input=$(expand "$input" "{{TOOLS_KALI}}" "kali.md")
-input=$(expand "$input" "{{TOOLS_MYTHIC}}" "mythic.md")
+
+# Find all {{TOOLS_XXX}} placeholders
+placeholders=$(echo "$input" | grep -Eo '\{\{TOOLS_[A-Z_]+\}\}' | sort -u)
+
+for ph in $placeholders; do
+    # Extract name: {{TOOLS_ASSET}} → asset
+    name=$(echo "$ph" | sed 's/{{TOOLS_//;s/}}//' | tr '[:upper:]' '[:lower:]')
+    tool_file="$PROMPTS_DIR/_tools/${name}.md"
+    if [ -f "$tool_file" ]; then
+        tool_content=$(cat "$tool_file")
+        input="${input//$ph/$tool_content}"
+    else
+        echo "⚠ expand-tools: $_tools/${name}.md not found, leaving $ph as-is" >&2
+    fi
+done
+
 echo "$input"
 ```
+
+**优势**：以后加 Cloudflare R2 MCP 时，只需创建 `prompts/_tools/r2.md`，在 prompt 里加 `{{TOOLS_R2}}`，脚本不用改。
 
 ### 5.3 `validate-prompts.sh`
 
 ```bash
 #!/bin/bash
-# Checks that all prompt files have no unexpanded {{...}} placeholders except known ones.
+# Validates that all prompt files have no unknown {{...}} placeholders.
+# {{TOOLS_*}} placeholders are auto-validated — expand-tools.sh handles them generically.
 # Usage: ./scripts/validate-prompts.sh
-# Compatible with macOS (bash 3.2+) and Linux.
 
 set -euo pipefail
 PROMPTS_DIR="$(cd "$(dirname "$0")/../prompts" && pwd)"
 
-# Known placeholders that are OK to leave unexpanded
-KNOWN="{{TOOLS_ASSET}} {{TOOLS_KALI}} {{TOOLS_MYTHIC}} {{WORKSPACE}} {{MCP_ASSET_URL}} {{MCP_KALI_URL}} {{MCP_MYTHIC_URL}}"
+# Known non-tool placeholders that are OK to leave unexpanded
+KNOWN="{{WORKSPACE}} {{MCP_ASSET_URL}} {{MCP_KALI_URL}} {{MCP_MYTHIC_URL}}"
 
 for f in "$PROMPTS_DIR"/*.md; do
     base=$(basename "$f")
     unknown=$(grep -Eo '\{\{[A-Z_]+\}\}' "$f" 2>/dev/null | sort -u | while read -r p; do
+        # {{TOOLS_*}} placeholders are always valid (generic expansion)
+        if [[ "$p" =~ ^\{\{TOOLS_[A-Z_]+\}\}$ ]]; then
+            continue
+        fi
+        # Check against known non-tool placeholders
         if ! echo "$KNOWN" | grep -qF "$p"; then
             echo "  $p"
         fi
@@ -358,7 +378,57 @@ done
 
 ---
 
-## 六、使用流程
+## 六、测试策略
+
+### 6.1 三层验证
+
+| 层级 | 做什么 | 频率 |
+|------|--------|------|
+| **结构校验** | `validate-prompts.sh` 检查占位符、格式完整性 | 每次改 prompt |
+| **单 Agent 测试** | 在 Multica 发一个单步任务，观察 Agent 行为 | 新建/改 agent 时 |
+| **链式测试** | Squad 模式下发跨 agent 任务，观察手递手 | 关键场景回归 |
+
+### 6.2 `_tests/` 目录
+
+每个测试文件就是一个短任务描述，直接粘贴到 Multica issue。测试用例覆盖：
+
+| 测试文件 | 目标 | 发给 |
+|----------|------|------|
+| `echo-subdomains.md` | "对 example.com 做子域名发现和端口扫描" | AC-Echo |
+| `echo-export-assets.md` | "把发现的资产写入项目 X 的 asset-mcp" | AC-Echo |
+| `ghost-list-callbacks.md` | "列出所有活跃 callback 和各自支持的命令" | AC-Ghost |
+| `breach-verify-sqli.md` | "验证 http://target/api?id=1' 的 SQL 注入" | AC-Breach |
+| `path-recon-from-callback.md` | "从 callback 3 执行内网存活主机探测" | AC-Path |
+| `quill-generate-report.md` | "生成项目 X 的完整攻防报告" | AC-Quill |
+| `supervisor-route-recon.md` | "侦察 target.com 的外网攻击面" | AC-Supervisor（应分派给 AC-Echo） |
+| `supervisor-route-c2.md` | "看下 callback 3 的当前状态" | AC-Supervisor（应直接给 AC-Ghost） |
+| `chain-echo-to-breach.md` | "发现 http://target 的漏洞线索后交给利用 agent" | AC-Supervisor（应 Echo→Breach） |
+
+### 6.3 文件传输归属
+
+| 场景 | Agent | 原因 |
+|------|-------|------|
+| "把 mimikatz.exe 传到 callback 3" | AC-Ghost | C2 文件传输 |
+| "把回调的扫描结果下载回来" | AC-Ghost | C2 文件传输 |
+| "把工具存到 R2 以备后用" | AC-Forge | 资源管理（未来 `r2_upload`） |
+| "把报告导出上传到飞书" | AC-Quill | 报告交付 |
+| "从 R2 拉工具传到 callback" | AC-Forge → AC-Ghost | 跨 agent 链，Supervisor 编排 |
+
+### 6.4 Cloudflare R2 扩展
+
+未来加 R2 MCP 时只需三步，无需修改脚本：
+
+```
+1. 新建 prompts/_tools/r2.md    # 工具注册表
+2. prompt 中加 {{TOOLS_R2}}     # 引用
+3. 新建 _tests/forge-r2-upload.md  # 测试用例
+```
+
+`expand-tools.sh` 自动识别 `{{TOOLS_R2}}` → 匹配 `_tools/r2.md`。
+
+---
+
+## 七、使用流程
 
 ### 在 Multica 创建 Agent
 
@@ -387,7 +457,7 @@ vim prompts/_tools/asset.md  # 加新工具
 
 ---
 
-## 七、文件清单
+## 八、文件清单
 
 | 文件 | 说明 |
 |------|------|
@@ -395,6 +465,15 @@ vim prompts/_tools/asset.md  # 加新工具
 | `prompts/_tools/asset.md` | asset-mcp 工具注册表 |
 | `prompts/_tools/kali.md` | kali-mcp 工具注册表 |
 | `prompts/_tools/mythic.md` | mythic-mcp 工具注册表 |
+| `prompts/_tests/echo-subdomains.md` | AC-Echo 子域名测试 |
+| `prompts/_tests/echo-export-assets.md` | AC-Echo 资产入库测试 |
+| `prompts/_tests/ghost-list-callbacks.md` | AC-Ghost 回调测试 |
+| `prompts/_tests/breach-verify-sqli.md` | AC-Breach 漏洞验证测试 |
+| `prompts/_tests/path-recon-from-callback.md` | AC-Path 内网探测测试 |
+| `prompts/_tests/quill-generate-report.md` | AC-Quill 报告测试 |
+| `prompts/_tests/supervisor-route-recon.md` | Supervisor 路由测试（侦察） |
+| `prompts/_tests/supervisor-route-c2.md` | Supervisor 路由测试（C2） |
+| `prompts/_tests/chain-echo-to-breach.md` | Echo→Breach 链式测试 |
 | `prompts/supervisor.md` | AC-Supervisor 总指挥 prompt |
 | `prompts/strategist.md` | AC-Strategist 战略规划 prompt |
 | `prompts/echo-recon.md` | AC-Echo 攻击面测绘 prompt |
@@ -403,5 +482,5 @@ vim prompts/_tools/asset.md  # 加新工具
 | `prompts/path-lateral.md` | AC-Path 内网路径 prompt |
 | `prompts/forge-resource.md` | AC-Forge 资源管理 prompt |
 | `prompts/quill-report.md` | AC-Quill 报告编写 prompt |
-| `scripts/expand-tools.sh` | 占位符展开脚本 |
+| `scripts/expand-tools.sh` | 占位符展开脚本（通用版） |
 | `scripts/validate-prompts.sh` | 占位符校验脚本 |
