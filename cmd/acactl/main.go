@@ -9,6 +9,13 @@ import (
 	"adversarychef/acactl/commands"
 )
 
+// commands that only use global flags (no subcommand-specific flags)
+var globalCommands = map[string]bool{
+	"up":     true,
+	"down":   true,
+	"status": true,
+}
+
 func main() {
 	dataDir := flag.String("data-dir", "", "data directory (default: ~/.aca)")
 	projectRoot := flag.String("project-root", ".", "project root for go build + prompts")
@@ -25,6 +32,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "  status   Check service health\n")
 		fmt.Fprintf(os.Stderr, "  tasks    List tasks\n")
 		fmt.Fprintf(os.Stderr, "  logs     View task execution logs\n")
+		fmt.Fprintf(os.Stderr, "  project  Create a project\n")
 		fmt.Fprintf(os.Stderr, "\nOptions:\n")
 		flag.PrintDefaults()
 	}
@@ -34,10 +42,14 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Parse subcommand
+	// Extract subcommand
 	subcmd := os.Args[1]
-	os.Args = append([]string{os.Args[0]}, os.Args[2:]...)
-	flag.Parse()
+
+	// Parse global flags only for commands that use them
+	if globalCommands[subcmd] {
+		os.Args = append([]string{os.Args[0]}, os.Args[2:]...)
+		flag.Parse()
+	}
 
 	switch subcmd {
 	case "up":
@@ -52,6 +64,34 @@ func main() {
 		}
 	case "status":
 		if err := commands.Status(ports); err != nil {
+			fmt.Fprintf(os.Stderr, "error: %v\n", err)
+			os.Exit(1)
+		}
+	case "tasks":
+		fs := flag.NewFlagSet("tasks", flag.ExitOnError)
+		project := fs.String("project", "", "filter by project ID")
+		st := fs.String("status", "", "filter by status")
+		fs.Parse(os.Args[2:])
+		if err := commands.Tasks(ports[2], *project, *st); err != nil {
+			fmt.Fprintf(os.Stderr, "error: %v\n", err)
+			os.Exit(1)
+		}
+	case "logs":
+		fs := flag.NewFlagSet("logs", flag.ExitOnError)
+		taskID := fs.String("task", "", "task ID")
+		follow := fs.Bool("follow", false, "follow streaming output")
+		raw := fs.Bool("raw", false, "output raw stream-json")
+		fs.Parse(os.Args[2:])
+		if err := commands.Logs(ports[2], *taskID, *follow, *raw); err != nil {
+			fmt.Fprintf(os.Stderr, "error: %v\n", err)
+			os.Exit(1)
+		}
+	case "project":
+		fs := flag.NewFlagSet("project", flag.ExitOnError)
+		name := fs.String("name", "", "project name")
+		desc := fs.String("description", "", "project description")
+		fs.Parse(os.Args[2:])
+		if err := commands.CreateProject(ports[2], *name, *desc); err != nil {
 			fmt.Fprintf(os.Stderr, "error: %v\n", err)
 			os.Exit(1)
 		}
