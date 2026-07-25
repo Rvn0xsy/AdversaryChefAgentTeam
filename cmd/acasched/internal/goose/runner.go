@@ -1,10 +1,13 @@
 package goose
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
 
 	"adversarychef/acasched/internal/store"
 )
@@ -12,6 +15,7 @@ import (
 type Runner struct {
 	PromptsDir string
 	WorkDir    string
+	LogDir     string
 	NexusMCP   string
 	KaliMCP    string
 	MythicMCP  string
@@ -55,6 +59,39 @@ func (r *Runner) Execute(ctx context.Context, task *store.Task) (*Result, error)
 		cmd.Dir = r.WorkDir
 	}
 
+	if r.LogDir != "" {
+		os.MkdirAll(r.LogDir, 0755)
+		logPath := filepath.Join(r.LogDir, task.ID+".jsonl")
+		f, err := os.Create(logPath)
+		if err != nil {
+			return nil, fmt.Errorf("create log file: %w", err)
+		}
+		defer f.Close()
+
+		// Stderr goes directly to the log file
+		cmd.Stderr = f
+
+		// Pipe stdout: write to file + capture for parsing
+		pr, pw, _ := os.Pipe()
+		cmd.Stdout = pw
+
+		var buf bytes.Buffer
+		done := make(chan struct{})
+		go func() {
+			io.Copy(io.MultiWriter(f, &buf), pr)
+			close(done)
+		}()
+
+		err = cmd.Run()
+		pw.Close() // signal EOF to the pipe reader
+		<-done     // wait for the copy to complete
+		if err != nil {
+			return nil, fmt.Errorf("goose exited: %w", err)
+		}
+		return parseStreamOutput(buf.String()), nil
+	}
+
+	// Fallback when LogDir is empty (existing behavior)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return nil, fmt.Errorf("goose exited: %w, output: %s", err, string(output))

@@ -10,11 +10,12 @@ import (
 )
 
 // RunAPI starts the HTTP API server and blocks until ctx is cancelled.
-func RunAPI(ctx context.Context, s *store.Store, port int) {
+func RunAPI(ctx context.Context, s *store.Store, logDir string, port int) {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/api/tasks", handleTasks(s))
 	mux.HandleFunc("/api/tasks/", handleTaskByID(s))
+	mux.HandleFunc("GET /api/tasks/{id}/logs", handleTaskLogs(logDir))
 	mux.HandleFunc("/api/projects", handleProjects(s))
 	mux.HandleFunc("/api/projects/", handleProjectByID(s))
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
