@@ -30,7 +30,7 @@ func (pm *ProcessManager) BuildBinary(modulePath string, outputPath string) erro
 	cmd := exec.Command("go", "build",
 		"-o", outputPath,
 		modulePath)
-	cmd.Env = append(os.Environ(), "GOWORK=off", "CGO_ENABLED=0")
+	cmd.Env = append(os.Environ(), "CGO_ENABLED=0")
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	return cmd.Run()
