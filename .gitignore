@@ -31,3 +31,4 @@ data/nuclei-templates/
 server
 acactl
 acasched
+.worktrees/
