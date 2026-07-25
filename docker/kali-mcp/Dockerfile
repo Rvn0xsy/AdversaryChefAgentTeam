@@ -14,9 +14,20 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     nmap \
     sqlmap \
     gobuster \
-    curl wget netcat-openbsd dnsutils \
+    curl wget unzip netcat-openbsd dnsutils \
+    whois \
+    naabu \
+    nuclei \
+    ffuf \
+    httpx-toolkit \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
+
+# katana is not packaged in Kali; install from GitHub releases
+RUN KATANA_VER=$(curl -s https://api.github.com/repos/projectdiscovery/katana/releases/latest | grep tag_name | cut -d\" -f4) \
+    && curl -sLo /tmp/katana.zip https://github.com/projectdiscovery/katana/releases/download/${KATANA_VER}/katana_${KATANA_VER#v}_linux_amd64.zip \
+    && cd /usr/local/bin && unzip -qo /tmp/katana.zip katana && rm /tmp/katana.zip \
+    && chmod +x /usr/local/bin/katana
 COPY --from=builder /kali-mcp /usr/local/bin/kali-mcp
 EXPOSE 8080
 ENTRYPOINT ["kali-mcp"]
