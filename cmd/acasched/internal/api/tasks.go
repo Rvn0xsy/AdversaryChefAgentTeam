@@ -31,6 +31,10 @@ func handleTasks(s *store.Store) http.HandlerFunc {
 				return
 			}
 			t.Status = "pending"
+			if t.MaxTurns == 0 { t.MaxTurns = 40 }
+			if t.TimeoutSecs == 0 { t.TimeoutSecs = 1800 }
+			if t.RetryCount == 0 { t.RetryCount = 1 }
+			if t.CreatedBy == "" { t.CreatedBy = "api" }
 			if err := s.CreateTask(&t); err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return

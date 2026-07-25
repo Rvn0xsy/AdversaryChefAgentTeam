@@ -10,32 +10,33 @@ import (
 )
 
 type Task struct {
-	ID           string
-	ProjectID    string
-	ParentID     string
-	Agent        string
-	Status       string // pending|dispatched|running|done|failed|timeout|skipped
-	Title        string
-	Description  string
-	Result       string
-	Error        string
-	CreatedBy    string
-	MaxTurns     int
-	TimeoutSecs  int
-	RetryCount   int
-	Attempt      int
-	CreatedAt    time.Time
-	DispatchedAt *time.Time
-	CompletedAt  *time.Time
+	ID           string     `json:"id"`
+	ProjectID    string     `json:"project_id"`
+	ParentID     string     `json:"parent_id"`
+	Agent        string     `json:"agent"`
+	Status       string     `json:"status"` // pending|dispatched|running|done|failed|timeout|skipped
+	Title        string     `json:"title"`
+	Description  string     `json:"description"`
+	Result       string     `json:"result"`
+	Error        string     `json:"error"`
+	CreatedBy    string     `json:"created_by"`
+	MaxTurns     int        `json:"max_turns"`
+	TimeoutSecs  int        `json:"timeout_secs"`
+	RetryCount   int        `json:"retry_count"`
+	Attempt      int        `json:"attempt"`
+	CreatedAt    time.Time  `json:"created_at"`
+	DispatchedAt *time.Time `json:"dispatched_at,omitempty"`
+	CompletedAt  *time.Time `json:"completed_at,omitempty"`
 }
 
 type Project struct {
-	ID          string
-	Name        string
-	Description string
-	Status      string
-	CreatedAt   time.Time
+	ID          string    `json:"id"`
+	Name        string    `json:"name"`
+	Description string    `json:"description"`
+	Status      string    `json:"status"`
+	CreatedAt   time.Time `json:"created_at"`
 }
+
 
 type Store struct {
 	mu sync.RWMutex

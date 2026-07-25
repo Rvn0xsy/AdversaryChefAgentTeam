@@ -18,13 +18,15 @@ func registerSchedulerBridge(server *mcp.Server, sm *mcputil.SessionMap, schedul
 		Name:        "scheduler_create_task",
 		Description: "Create a sub-task for another agent to execute (via acasched)",
 	}, func(ctx context.Context, req *mcp.CallToolRequest, params struct {
-		ParentID    string `json:"parent_id" jsonschema:"Parent task ID"`
+		ProjectID   string `json:"project_id,omitempty" jsonschema:"Project ID (auto-injected from session)"`
+		ParentID    string `json:"parent_id,omitempty" jsonschema:"Parent task ID (optional)"`
 		Agent       string `json:"agent" jsonschema:"Target agent name"`
 		Title       string `json:"title" jsonschema:"Task title"`
 		Description string `json:"description,omitempty" jsonschema:"Task description"`
 		MaxTurns    int    `json:"max_turns,omitempty" jsonschema:"Maximum turns for the sub-task"`
 	}) (*mcp.CallToolResult, any, error) {
 		projectID := mcputil.ProjectIDFromContext(ctx)
+		if projectID == "" { projectID = params.ProjectID }
 		if projectID == "" {
 			return mcputil.TextResult("project_id not found in session context"), nil, nil
 		}
