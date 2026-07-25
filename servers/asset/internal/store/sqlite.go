@@ -461,4 +461,94 @@ func emptySlice(s []string) []string {
 }
 
 
+// SearchAssets searches assets by full-text query across name, ips, domains, tech_stack.
+func (s *SQLiteStore) SearchAssets(projectID, query string) ([]models.Asset, error) {
+	like := "%" + query + "%"
+	rows, err := s.db.Query(`SELECT id, project_id, name, ips, domains, tech_stack, scope, description, created_at FROM assets
+		WHERE project_id=? AND (name LIKE ? OR ips LIKE ? OR domains LIKE ? OR tech_stack LIKE ? OR description LIKE ?)`,
+		projectID, like, like, like, like, like)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []models.Asset
+	for rows.Next() {
+		var a models.Asset
+		var ct string
+		if err := rows.Scan(&a.ID, &a.ProjectID, &a.Name, &a.IPs, &a.Domains, &a.TechStack, &a.Scope, &a.Description, &ct); err != nil {
+			return nil, err
+		}
+		a.CreatedAt, _ = time.Parse(time.RFC3339, ct)
+		out = append(out, a)
+	}
+	return out, rows.Err()
+}
+
+// SearchClues searches clues by query, optional type and status filters.
+func (s *SQLiteStore) SearchClues(projectID, query, clueType, status string) ([]models.Clue, error) {
+	cond := "project_id=?"
+	args := []interface{}{projectID}
+	if query != "" {
+		cond += " AND (title LIKE ? OR content LIKE ?)"
+		like := "%" + query + "%"
+		args = append(args, like, like)
+	}
+	if clueType != "" {
+		cond += " AND type=?"
+		args = append(args, clueType)
+	}
+	if status != "" {
+		cond += " AND status=?"
+		args = append(args, status)
+	}
+	rows, err := s.db.Query(`SELECT id, project_id, title, content, type, status, created_at FROM clues WHERE `+cond, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []models.Clue
+	for rows.Next() {
+		var c models.Clue
+		var ct string
+		if err := rows.Scan(&c.ID, &c.ProjectID, &c.Title, &c.Content, &c.Type, &c.Status, &ct); err != nil {
+			return nil, err
+		}
+		c.CreatedAt, _ = time.Parse(time.RFC3339, ct)
+		out = append(out, c)
+	}
+	return out, rows.Err()
+}
+
+// ProjectSummary returns a rollup of counts per entity type.
+func (s *SQLiteStore) ProjectSummary(projectID string) (*models.ProjectSummary, error) {
+	ps := &models.ProjectSummary{CluesByType: map[string]int{}}
+	if err := s.db.QueryRow("SELECT COUNT(*) FROM assets WHERE project_id=?", projectID).Scan(&ps.Assets); err != nil {
+		return nil, err
+	}
+	if err := s.db.QueryRow("SELECT COUNT(*) FROM clues WHERE project_id=?", projectID).Scan(&ps.Clues); err != nil {
+		return nil, err
+	}
+	rows, err := s.db.Query("SELECT type, COUNT(*) FROM clues WHERE project_id=? GROUP BY type", projectID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var t string
+		var c int
+		if err := rows.Scan(&t, &c); err != nil {
+			return nil, err
+		}
+		ps.CluesByType[t] = c
+	}
+	if err := s.db.QueryRow("SELECT COUNT(*) FROM credentials WHERE project_id=?", projectID).Scan(&ps.Credentials); err != nil {
+		return nil, err
+	}
+	if err := s.db.QueryRow("SELECT COUNT(*) FROM worklogs WHERE project_id=?", projectID).Scan(&ps.WorkLogs); err != nil {
+		return nil, err
+	}
+	return ps, nil
+}
+
+
 // ensure the SQLite driver is referenced.

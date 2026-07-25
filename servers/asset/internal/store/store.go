@@ -29,4 +29,8 @@ type Store interface {
 	CreateWorkLog(w *models.WorkLog) error
 	UpdateWorkLog(w *models.WorkLog) error
 	DeleteWorkLog(id string) error
+
+	SearchAssets(projectID, query string) ([]models.Asset, error)
+	SearchClues(projectID, query, clueType, status string) ([]models.Clue, error)
+	ProjectSummary(projectID string) (*models.ProjectSummary, error)
 }

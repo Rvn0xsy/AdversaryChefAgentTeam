@@ -1,8 +1,10 @@
 package store
 import (
 	"fmt"
+	"strings"
 	"sync"
 	"time"
+
 	"adversarychef/asset/internal/models"
 )
 
@@ -276,4 +278,91 @@ func (s *MemoryStore) DeleteWorkLog(id string) error {
 	defer s.mu.Unlock()
 	delete(s.worklogs, id)
 	return nil
+}
+
+func (s *MemoryStore) SearchAssets(projectID, query string) ([]models.Asset, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	if query == "" {
+		return nil, nil
+	}
+	lower := strings.ToLower(query)
+	var result []models.Asset
+	for _, a := range s.assets {
+		if a.ProjectID != projectID {
+			continue
+		}
+		if contains(lower, a.Name, a.Description) || containsAny(lower, a.IPs) || containsAny(lower, a.Domains) || containsAny(lower, a.TechStack) {
+			result = append(result, *a)
+		}
+	}
+	return result, nil
+}
+
+func (s *MemoryStore) SearchClues(projectID, query, clueType, status string) ([]models.Clue, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	lower := strings.ToLower(query)
+	var result []models.Clue
+	for _, c := range s.clues {
+		if c.ProjectID != projectID {
+			continue
+		}
+		if clueType != "" && c.Type != clueType {
+			continue
+		}
+		if status != "" && c.Status != status {
+			continue
+		}
+		if lower == "" || contains(lower, c.Title, c.Content) {
+			result = append(result, *c)
+		}
+	}
+	return result, nil
+}
+
+func (s *MemoryStore) ProjectSummary(projectID string) (*models.ProjectSummary, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	ps := &models.ProjectSummary{CluesByType: map[string]int{}}
+	for _, a := range s.assets {
+		if a.ProjectID == projectID {
+			ps.Assets++
+		}
+	}
+	for _, c := range s.clues {
+		if c.ProjectID == projectID {
+			ps.Clues++
+			ps.CluesByType[c.Type]++
+		}
+	}
+	for _, cr := range s.credentials {
+		if cr.ProjectID == projectID {
+			ps.Credentials++
+		}
+	}
+	for _, w := range s.worklogs {
+		if w.ProjectID == projectID {
+			ps.WorkLogs++
+		}
+	}
+	return ps, nil
+}
+
+func contains(lower string, values ...string) bool {
+	for _, v := range values {
+		if strings.Contains(strings.ToLower(v), lower) {
+			return true
+		}
+	}
+	return false
+}
+
+func containsAny(lower string, values []string) bool {
+	for _, v := range values {
+		if strings.Contains(strings.ToLower(v), lower) {
+			return true
+		}
+	}
+	return false
 }

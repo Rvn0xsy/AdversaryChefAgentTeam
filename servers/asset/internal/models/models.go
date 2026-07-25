@@ -55,3 +55,12 @@ type WorkLog struct {
 	Content   string    `json:"content,omitempty"`
 	CreatedAt time.Time `json:"created_at"`
 }
+
+// ProjectSummary is a rollup view of a project.
+type ProjectSummary struct {
+	Assets      int            `json:"assets"`
+	Clues       int            `json:"clues"`
+	CluesByType map[string]int `json:"clues_by_type"`
+	Credentials int            `json:"credentials"`
+	WorkLogs    int            `json:"work_logs"`
+}
