@@ -11,7 +11,7 @@ import (
 )
 
 func registerTasks(server *mcp.Server, c *client.Client) {
-	mcp.AddTool(server, &mcp.Tool{
+	mcputil.AddLoggingTool(server, &mcp.Tool{
 		Name:        "mythic_issue_task",
 		Description: "Issue a command to a callback. Returns the task ID. Use mythic_get_task_status or mythic_wait_for_task to get results.",
 	}, func(ctx context.Context, req *mcp.CallToolRequest, params struct {
@@ -31,7 +31,7 @@ func registerTasks(server *mcp.Server, c *client.Client) {
 		return mcputil.TextResult(string(b)), nil, nil
 	})
 
-	mcp.AddTool(server, &mcp.Tool{
+	mcputil.AddLoggingTool(server, &mcp.Tool{
 		Name:        "mythic_list_tasks",
 		Description: "List tasks for a callback, most recent first",
 	}, func(ctx context.Context, req *mcp.CallToolRequest, params struct {
@@ -50,7 +50,7 @@ func registerTasks(server *mcp.Server, c *client.Client) {
 		return mcputil.TextResult(string(b)), nil, nil
 	})
 
-	mcp.AddTool(server, &mcp.Tool{
+	mcputil.AddLoggingTool(server, &mcp.Tool{
 		Name:        "mythic_get_task_status",
 		Description: "Check the status of a task (non-blocking)",
 	}, func(ctx context.Context, req *mcp.CallToolRequest, params struct {
@@ -64,7 +64,7 @@ func registerTasks(server *mcp.Server, c *client.Client) {
 		return mcputil.TextResult(string(b)), nil, nil
 	})
 
-	mcp.AddTool(server, &mcp.Tool{
+	mcputil.AddLoggingTool(server, &mcp.Tool{
 		Name:        "mythic_wait_for_task",
 		Description: "Wait for a task to complete and return the output (blocking)",
 	}, func(ctx context.Context, req *mcp.CallToolRequest, params struct {
@@ -83,7 +83,7 @@ func registerTasks(server *mcp.Server, c *client.Client) {
 		return mcputil.TextResult(string(b)), nil, nil
 	})
 
-	mcp.AddTool(server, &mcp.Tool{
+	mcputil.AddLoggingTool(server, &mcp.Tool{
 		Name:        "mythic_get_task_output",
 		Description: "Get the full decoded output of a completed task",
 	}, func(ctx context.Context, req *mcp.CallToolRequest, params struct {

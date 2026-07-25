@@ -29,7 +29,7 @@ func registerProjects(server *mcp.Server, s store.Store) {
 	Getter(server, "get_project", "Get project details", "Project", s.GetProject)
 	Deleter(server, "delete_project", "Delete a project", "Project", s.DeleteProject)
 
-	mcp.AddTool(server, &mcp.Tool{
+	mcputil.AddLoggingTool(server, &mcp.Tool{
 		Name:        "create_project",
 		Description: "Create a new penetration testing project",
 	}, func(ctx context.Context, req *mcp.CallToolRequest, params createProjectParams) (*mcp.CallToolResult, any, error) {
@@ -45,7 +45,7 @@ func registerProjects(server *mcp.Server, s store.Store) {
 		return mcputil.TextResult(string(b)), nil, nil
 	})
 
-	mcp.AddTool(server, &mcp.Tool{
+	mcputil.AddLoggingTool(server, &mcp.Tool{
 		Name:        "update_project",
 		Description: "Update project information",
 	}, func(ctx context.Context, req *mcp.CallToolRequest, params updateProjectParams) (*mcp.CallToolResult, any, error) {

@@ -32,7 +32,7 @@ func registerClues(server *mcp.Server, s store.Store) {
 	Getter(server, "get_clue", "Get clue details", "Clue", s.GetClue)
 	Deleter(server, "delete_clue", "Delete a clue", "Clue", s.DeleteClue)
 
-	mcp.AddTool(server, &mcp.Tool{
+	mcputil.AddLoggingTool(server, &mcp.Tool{
 		Name:        "create_clue",
 		Description: "Create a new clue/finding record",
 	}, func(ctx context.Context, req *mcp.CallToolRequest, params createClueParams) (*mcp.CallToolResult, any, error) {
@@ -50,7 +50,7 @@ func registerClues(server *mcp.Server, s store.Store) {
 		return mcputil.TextResult(string(b)), nil, nil
 	})
 
-	mcp.AddTool(server, &mcp.Tool{
+	mcputil.AddLoggingTool(server, &mcp.Tool{
 		Name:        "update_clue",
 		Description: "Update clue information",
 	}, func(ctx context.Context, req *mcp.CallToolRequest, params updateClueParams) (*mcp.CallToolResult, any, error) {

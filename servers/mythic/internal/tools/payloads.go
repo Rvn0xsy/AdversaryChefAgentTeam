@@ -11,7 +11,7 @@ import (
 )
 
 func registerPayloads(server *mcp.Server, c *client.Client) {
-	mcp.AddTool(server, &mcp.Tool{
+	mcputil.AddLoggingTool(server, &mcp.Tool{
 		Name:        "mythic_create_payload",
 		Description: "Create a new payload/agent in Mythic",
 	}, func(ctx context.Context, req *mcp.CallToolRequest, params struct {
@@ -35,7 +35,7 @@ func registerPayloads(server *mcp.Server, c *client.Client) {
 		return mcputil.TextResult(string(b)), nil, nil
 	})
 
-	mcp.AddTool(server, &mcp.Tool{
+	mcputil.AddLoggingTool(server, &mcp.Tool{
 		Name:        "mythic_get_payload",
 		Description: "Get payload details by UUID",
 	}, func(ctx context.Context, req *mcp.CallToolRequest, params struct {

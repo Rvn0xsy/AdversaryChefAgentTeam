@@ -11,7 +11,7 @@ import (
 )
 
 func registerCallbacks(server *mcp.Server, c *client.Client) {
-	mcp.AddTool(server, &mcp.Tool{
+	mcputil.AddLoggingTool(server, &mcp.Tool{
 		Name:        "mythic_list_callbacks",
 		Description: "List all active agent callbacks from the Mythic C2 server",
 	}, func(ctx context.Context, req *mcp.CallToolRequest, _ struct{}) (*mcp.CallToolResult, any, error) {
@@ -23,7 +23,7 @@ func registerCallbacks(server *mcp.Server, c *client.Client) {
 		return mcputil.TextResult(string(b)), nil, nil
 	})
 
-	mcp.AddTool(server, &mcp.Tool{
+	mcputil.AddLoggingTool(server, &mcp.Tool{
 		Name:        "mythic_get_callback",
 		Description: "Get details of a specific callback by display ID",
 	}, func(ctx context.Context, req *mcp.CallToolRequest, params struct {
@@ -42,7 +42,7 @@ func registerCallbacks(server *mcp.Server, c *client.Client) {
 		return mcputil.TextResult("callback not found: " + params.CallbackID), nil, nil
 	})
 
-	mcp.AddTool(server, &mcp.Tool{
+	mcputil.AddLoggingTool(server, &mcp.Tool{
 		Name:        "mythic_get_callback_commands",
 		Description: "List all loaded commands for a callback",
 	}, func(ctx context.Context, req *mcp.CallToolRequest, params struct {

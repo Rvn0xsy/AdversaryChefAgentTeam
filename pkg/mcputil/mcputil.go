@@ -59,6 +59,18 @@ func ParseConfig(name, version string, defaultPort int) ServerConfig {
 	}
 }
 
+// AddLoggingTool registers a tool handler with logging: prints tool name and params on call.
+func AddLoggingTool[P any](server *mcp.Server, tool *mcp.Tool, handler func(context.Context, *mcp.CallToolRequest, P) (*mcp.CallToolResult, any, error)) {
+	wrapped := func(ctx context.Context, req *mcp.CallToolRequest, params P) (*mcp.CallToolResult, any, error) {
+		start := time.Now()
+		log.Printf("[%s] called params=%+v", tool.Name, params)
+		result, meta, err := handler(ctx, req, params)
+		log.Printf("[%s] done in %v err=%v", tool.Name, time.Since(start), err)
+		return result, meta, err
+	}
+	mcp.AddTool(server, tool, wrapped)
+}
+
 // TextResult creates a text content MCP result.
 func TextResult(text string) *mcp.CallToolResult {
 	return &mcp.CallToolResult{

@@ -11,7 +11,7 @@ import (
 )
 
 func registerListJobs(server *mcp.Server, mgr *job.Manager) {
-	mcp.AddTool(server, &mcp.Tool{
+	mcputil.AddLoggingTool(server, &mcp.Tool{
 		Name: "list_jobs",
 		Description: "List all jobs. Optionally filter by status: running/completed/failed/killed/timed_out.",
 	}, func(ctx context.Context, req *mcp.CallToolRequest, params struct {
@@ -24,7 +24,7 @@ func registerListJobs(server *mcp.Server, mgr *job.Manager) {
 }
 
 func registerGetJob(server *mcp.Server, mgr *job.Manager) {
-	mcp.AddTool(server, &mcp.Tool{
+	mcputil.AddLoggingTool(server, &mcp.Tool{
 		Name: "get_job",
 		Description: "Get job details including status and output. Partial output is available while the job is running.",
 	}, func(ctx context.Context, req *mcp.CallToolRequest, params struct {

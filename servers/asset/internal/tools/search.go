@@ -28,7 +28,7 @@ type projectSummaryParams struct {
 }
 
 func registerSearch(server *mcp.Server, s store.Store) {
-	mcp.AddTool(server, &mcp.Tool{
+	mcputil.AddLoggingTool(server, &mcp.Tool{
 		Name:        "search_assets",
 		Description: "Search assets by keyword across name, IPs, domains, tech stack, and description",
 	}, func(ctx context.Context, req *mcp.CallToolRequest, params searchAssetsParams) (*mcp.CallToolResult, any, error) {
@@ -43,7 +43,7 @@ func registerSearch(server *mcp.Server, s store.Store) {
 		return mcputil.TextResult(string(b)), nil, nil
 	})
 
-	mcp.AddTool(server, &mcp.Tool{
+	mcputil.AddLoggingTool(server, &mcp.Tool{
 		Name:        "search_clues",
 		Description: "Search clues/findings by keyword, with optional type and status filters",
 	}, func(ctx context.Context, req *mcp.CallToolRequest, params searchCluesParams) (*mcp.CallToolResult, any, error) {
@@ -58,7 +58,7 @@ func registerSearch(server *mcp.Server, s store.Store) {
 		return mcputil.TextResult(string(b)), nil, nil
 	})
 
-	mcp.AddTool(server, &mcp.Tool{
+	mcputil.AddLoggingTool(server, &mcp.Tool{
 		Name:        "project_summary",
 		Description: "Get a summary of a project: asset count, clue count by type/status, credential count, worklog count",
 	}, func(ctx context.Context, req *mcp.CallToolRequest, params projectSummaryParams) (*mcp.CallToolResult, any, error) {

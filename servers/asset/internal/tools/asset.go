@@ -36,7 +36,7 @@ func registerAssets(server *mcp.Server, s store.Store) {
 	Getter(server, "get_asset", "Get asset details", "Asset", s.GetAsset)
 	Deleter(server, "delete_asset", "Delete an asset", "Asset", s.DeleteAsset)
 
-	mcp.AddTool(server, &mcp.Tool{
+	mcputil.AddLoggingTool(server, &mcp.Tool{
 		Name:        "create_asset",
 		Description: "Create a new asset record",
 	}, func(ctx context.Context, req *mcp.CallToolRequest, params createAssetParams) (*mcp.CallToolResult, any, error) {
@@ -56,7 +56,7 @@ func registerAssets(server *mcp.Server, s store.Store) {
 		return mcputil.TextResult(string(b)), nil, nil
 	})
 
-	mcp.AddTool(server, &mcp.Tool{
+	mcputil.AddLoggingTool(server, &mcp.Tool{
 		Name:        "update_asset",
 		Description: "Update asset information",
 	}, func(ctx context.Context, req *mcp.CallToolRequest, params updateAssetParams) (*mcp.CallToolResult, any, error) {

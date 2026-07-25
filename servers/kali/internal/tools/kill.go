@@ -10,7 +10,7 @@ import (
 )
 
 func registerKillJob(server *mcp.Server, mgr *job.Manager) {
-	mcp.AddTool(server, &mcp.Tool{
+	mcputil.AddLoggingTool(server, &mcp.Tool{
 		Name: "kill_job",
 		Description: "Terminate a running job. Force-kills the entire process group to ensure all child processes are cleaned up.",
 	}, func(ctx context.Context, req *mcp.CallToolRequest, params struct {

@@ -28,7 +28,7 @@ func registerWorkLogs(server *mcp.Server, s store.Store) {
 	Getter(server, "get_work_log", "Get work log details", "Work log", s.GetWorkLog)
 	Deleter(server, "delete_work_log", "Delete a work log", "Work log", s.DeleteWorkLog)
 
-	mcp.AddTool(server, &mcp.Tool{
+	mcputil.AddLoggingTool(server, &mcp.Tool{
 		Name:        "create_work_log",
 		Description: "Create a new work log record",
 	}, func(ctx context.Context, req *mcp.CallToolRequest, params createWorkLogParams) (*mcp.CallToolResult, any, error) {
@@ -44,7 +44,7 @@ func registerWorkLogs(server *mcp.Server, s store.Store) {
 		return mcputil.TextResult(string(b)), nil, nil
 	})
 
-	mcp.AddTool(server, &mcp.Tool{
+	mcputil.AddLoggingTool(server, &mcp.Tool{
 		Name:        "update_work_log",
 		Description: "Update work log",
 	}, func(ctx context.Context, req *mcp.CallToolRequest, params updateWorkLogParams) (*mcp.CallToolResult, any, error) {

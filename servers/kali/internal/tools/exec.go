@@ -20,7 +20,7 @@ type BashParams struct {
 }
 
 func registerExec(server *mcp.Server, mgr *job.Manager) {
-	mcp.AddTool(server, &mcp.Tool{
+	mcputil.AddLoggingTool(server, &mcp.Tool{
 		Name: "exec",
 		Description: "Execute a shell command asynchronously in the Kali Linux container. Returns a job_id. Use get_job to check progress/output, kill_job to stop. Supports nmap, sqlmap, metasploit, gobuster, hydra, and other pentesting tools.",
 	}, func(ctx context.Context, req *mcp.CallToolRequest, params BashParams) (*mcp.CallToolResult, any, error) {

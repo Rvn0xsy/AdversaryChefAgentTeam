@@ -35,7 +35,7 @@ func registerCredentials(server *mcp.Server, s store.Store) {
 	Getter(server, "get_credential", "Get credential details", "Credential", s.GetCredential)
 	Deleter(server, "delete_credential", "Delete a credential", "Credential", s.DeleteCredential)
 
-	mcp.AddTool(server, &mcp.Tool{
+	mcputil.AddLoggingTool(server, &mcp.Tool{
 		Name:        "create_credential",
 		Description: "Create a new credential record",
 	}, func(ctx context.Context, req *mcp.CallToolRequest, params createCredentialParams) (*mcp.CallToolResult, any, error) {
@@ -55,7 +55,7 @@ func registerCredentials(server *mcp.Server, s store.Store) {
 		return mcputil.TextResult(string(b)), nil, nil
 	})
 
-	mcp.AddTool(server, &mcp.Tool{
+	mcputil.AddLoggingTool(server, &mcp.Tool{
 		Name:        "update_credential",
 		Description: "Update credential information",
 	}, func(ctx context.Context, req *mcp.CallToolRequest, params updateCredentialParams) (*mcp.CallToolResult, any, error) {

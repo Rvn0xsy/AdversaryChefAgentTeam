@@ -11,7 +11,7 @@ import (
 )
 
 func registerFiles(server *mcp.Server, c *client.Client) {
-	mcp.AddTool(server, &mcp.Tool{
+	mcputil.AddLoggingTool(server, &mcp.Tool{
 		Name:        "mythic_list_files",
 		Description: "List files stored in Mythic",
 	}, func(ctx context.Context, req *mcp.CallToolRequest, params struct {
@@ -29,7 +29,7 @@ func registerFiles(server *mcp.Server, c *client.Client) {
 		return mcputil.TextResult(string(b)), nil, nil
 	})
 
-	mcp.AddTool(server, &mcp.Tool{
+	mcputil.AddLoggingTool(server, &mcp.Tool{
 		Name:        "mythic_upload_file",
 		Description: "Upload a local file to Mythic",
 	}, func(ctx context.Context, req *mcp.CallToolRequest, params struct {
@@ -47,7 +47,7 @@ func registerFiles(server *mcp.Server, c *client.Client) {
 		return mcputil.TextResult(string(b)), nil, nil
 	})
 
-	mcp.AddTool(server, &mcp.Tool{
+	mcputil.AddLoggingTool(server, &mcp.Tool{
 		Name:        "mythic_download_file",
 		Description: "Download a file from Mythic by file ID and save locally",
 	}, func(ctx context.Context, req *mcp.CallToolRequest, params struct {
@@ -65,7 +65,7 @@ func registerFiles(server *mcp.Server, c *client.Client) {
 		return mcputil.TextResult(string(b)), nil, nil
 	})
 
-	mcp.AddTool(server, &mcp.Tool{
+	mcputil.AddLoggingTool(server, &mcp.Tool{
 		Name:        "mythic_delete_file",
 		Description: "Delete a file from Mythic",
 	}, func(ctx context.Context, req *mcp.CallToolRequest, params struct {

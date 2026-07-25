@@ -12,7 +12,7 @@ import (
 // Lister registers a list tool that filters by project ID.
 func Lister[T any](server *mcp.Server, name, desc, entityName string,
 	fn func(string) ([]T, error)) {
-	mcp.AddTool(server, &mcp.Tool{
+	mcputil.AddLoggingTool(server, &mcp.Tool{
 		Name:        name,
 		Description: desc,
 	}, func(ctx context.Context, req *mcp.CallToolRequest, params struct {
@@ -30,7 +30,7 @@ func Lister[T any](server *mcp.Server, name, desc, entityName string,
 // ListerAll registers a list tool with no project ID filter.
 func ListerAll[T any](server *mcp.Server, name, desc string,
 	fn func() ([]T, error)) {
-	mcp.AddTool(server, &mcp.Tool{
+	mcputil.AddLoggingTool(server, &mcp.Tool{
 		Name:        name,
 		Description: desc,
 	}, func(ctx context.Context, req *mcp.CallToolRequest, _ struct{}) (*mcp.CallToolResult, any, error) {
@@ -46,7 +46,7 @@ func ListerAll[T any](server *mcp.Server, name, desc string,
 // Getter registers a get-by-ID tool.
 func Getter[T any](server *mcp.Server, name, desc, entityName string,
 	fn func(string) (*T, error)) {
-	mcp.AddTool(server, &mcp.Tool{
+	mcputil.AddLoggingTool(server, &mcp.Tool{
 		Name:        name,
 		Description: desc,
 	}, func(ctx context.Context, req *mcp.CallToolRequest, params struct {
@@ -64,7 +64,7 @@ func Getter[T any](server *mcp.Server, name, desc, entityName string,
 // Deleter registers a delete-by-ID tool.
 func Deleter(server *mcp.Server, name, desc, entityName string,
 	fn func(string) error) {
-	mcp.AddTool(server, &mcp.Tool{
+	mcputil.AddLoggingTool(server, &mcp.Tool{
 		Name:        name,
 		Description: desc,
 	}, func(ctx context.Context, req *mcp.CallToolRequest, params struct {
