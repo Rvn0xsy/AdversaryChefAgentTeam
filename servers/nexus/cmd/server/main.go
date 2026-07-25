@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"os"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
@@ -20,7 +21,12 @@ func main() {
 
 	sessionMap := mcputil.NewSessionMap()
 
+	schedulerURL := os.Getenv("SCHEDULER_URL")
+	if schedulerURL == "" {
+		schedulerURL = "http://127.0.0.1:9090"
+	}
+
 	mcputil.Run(cfg, func(server *mcp.Server) {
-		tools.RegisterAllV2(server, s, sessionMap)
+		tools.RegisterAllV3(server, s, sessionMap, schedulerURL)
 	}, sessionMap)
 }

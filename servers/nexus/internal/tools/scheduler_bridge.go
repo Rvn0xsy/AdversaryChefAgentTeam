@@ -12,7 +12,7 @@ import (
 )
 
 // registerSchedulerBridge registers tools for the scheduler integration bridge.
-func registerSchedulerBridge(server *mcp.Server, sm *mcputil.SessionMap) {
+func registerSchedulerBridge(server *mcp.Server, sm *mcputil.SessionMap, schedulerURL string) {
 	// scheduler_create_task — forward to acasched
 	mcputil.AddLoggingTool(server, &mcp.Tool{
 		Name:        "scheduler_create_task",
@@ -24,8 +24,13 @@ func registerSchedulerBridge(server *mcp.Server, sm *mcputil.SessionMap) {
 		Description string `json:"description,omitempty" jsonschema:"Task description"`
 		MaxTurns    int    `json:"max_turns,omitempty" jsonschema:"Maximum turns for the sub-task"`
 	}) (*mcp.CallToolResult, any, error) {
+		projectID := mcputil.ProjectIDFromContext(ctx)
+		if projectID == "" {
+			return mcputil.TextResult("project_id not found in session context"), nil, nil
+		}
 		body, _ := json.Marshal(map[string]any{
 			"parent_id":   params.ParentID,
+			"project_id":  projectID,
 			"agent":       params.Agent,
 			"title":       params.Title,
 			"description": params.Description,
@@ -33,7 +38,7 @@ func registerSchedulerBridge(server *mcp.Server, sm *mcputil.SessionMap) {
 			"created_by":  "agent",
 		})
 		resp, err := http.Post(
-			"http://127.0.0.1:9090/api/tasks",
+			schedulerURL+"/api/tasks",
 			"application/json",
 			bytes.NewReader(body),
 		)
@@ -56,11 +61,14 @@ func registerSchedulerBridge(server *mcp.Server, sm *mcputil.SessionMap) {
 		TaskID string `json:"task_id" jsonschema:"Task ID to complete"`
 		Result string `json:"result,omitempty" jsonschema:"Result summary"`
 	}) (*mcp.CallToolResult, any, error) {
-		body, _ := json.Marshal(map[string]string{"result": params.Result})
+		body, _ := json.Marshal(map[string]string{
+			"status": "done",
+			"result": params.Result,
+		})
 		httpReq, err := http.NewRequestWithContext(
 			ctx,
 			"PATCH",
-			"http://127.0.0.1:9090/api/tasks/"+params.TaskID,
+			schedulerURL+"/api/tasks/"+params.TaskID,
 			bytes.NewReader(body),
 		)
 		if err != nil {
@@ -77,3 +85,4 @@ func registerSchedulerBridge(server *mcp.Server, sm *mcputil.SessionMap) {
 		return mcputil.TextResult("task marked done"), nil, nil
 	})
 }
+

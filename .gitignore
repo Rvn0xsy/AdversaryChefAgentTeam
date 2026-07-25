@@ -28,3 +28,4 @@ logs/
 repo/
 # Nuclei official templates (managed by update-nuclei-templates.sh)
 data/nuclei-templates/
+server

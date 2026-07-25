@@ -169,4 +169,34 @@ func registerVulnerabilityTools(server *mcp.Server, s store.Store, sm *mcputil.S
 		b, _ := json.Marshal(v)
 		return mcputil.TextResult(string(b)), nil, nil
 	})
+
+	// vulnerability_update
+	mcputil.AddLoggingTool(server, &mcp.Tool{
+		Name:        "vulnerability_update",
+		Description: "Update a vulnerability node (all fields optional — only provided fields are changed)",
+	}, func(ctx context.Context, req *mcp.CallToolRequest, params struct {
+		ID          string  `json:"id" jsonschema:"Vulnerability ID (required)"`
+		Title       string  `json:"title,omitempty" jsonschema:"Vulnerability title"`
+		CVE         string  `json:"cve,omitempty" jsonschema:"CVE identifier"`
+		Severity    string  `json:"severity,omitempty" jsonschema:"Severity (critical|high|medium|low|info)"`
+		CVSS        float64 `json:"cvss,omitempty" jsonschema:"CVSS score (0.0-10.0)"`
+		Description string  `json:"description,omitempty" jsonschema:"Vulnerability description"`
+		Remediation string  `json:"remediation,omitempty" jsonschema:"Remediation guidance"`
+		Status      string  `json:"status,omitempty" jsonschema:"Status (open|in_progress|fixed|false_positive|wont_fix)"`
+	}) (*mcp.CallToolResult, any, error) {
+		v := &models.VulnerabilityNode{
+			ID:          params.ID,
+			Title:       params.Title,
+			CVE:         params.CVE,
+			Severity:    params.Severity,
+			CVSS:        params.CVSS,
+			Description: params.Description,
+			Remediation: params.Remediation,
+			Status:      params.Status,
+		}
+		if err := s.UpdateVulnerability(v); err != nil {
+			return mcputil.TextResult("update failed: " + err.Error()), nil, nil
+		}
+		return mcputil.TextResult("updated"), nil, nil
+	})
 }

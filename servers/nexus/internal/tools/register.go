@@ -21,9 +21,19 @@ func RegisterAll(server *mcp.Server, s store.Store) {
 // Graph Edges, Graph Queries, and Scheduler Bridge tools.
 func RegisterAllV2(server *mcp.Server, s store.Store, sm *mcputil.SessionMap) {
 	RegisterAll(server, s)
-	registerGraphNodes(server, s, sm)      // Operation Graph — Task 6
-	registerReasoningNodes(server, s, sm)   // Reasoning Graph — Task 6
-	registerGraphEdges(server, s, sm)       // Graph Edges — Task 6
-	registerGraphQueries(server, s, sm)     // Graph Queries — Task 6
-	registerSchedulerBridge(server, sm)      // Scheduler Bridge — Task 7
+	registerGraphNodes(server, s, sm)    // Operation Graph — Task 6
+	registerReasoningNodes(server, s, sm) // Reasoning Graph — Task 6
+	registerGraphEdges(server, s, sm)     // Graph Edges — Task 6
+	registerGraphQueries(server, s, sm)   // Graph Queries — Task 6
+	registerSchedulerBridge(server, sm, "http://127.0.0.1:9090") // Scheduler Bridge — Task 7
+}
+
+// RegisterAllV3 registers all V2 tools with a configurable scheduler URL.
+func RegisterAllV3(server *mcp.Server, s store.Store, sm *mcputil.SessionMap, schedulerURL string) {
+	RegisterAll(server, s)
+	registerGraphNodes(server, s, sm)
+	registerReasoningNodes(server, s, sm)
+	registerGraphEdges(server, s, sm)
+	registerGraphQueries(server, s, sm)
+	registerSchedulerBridge(server, sm, schedulerURL)
 }

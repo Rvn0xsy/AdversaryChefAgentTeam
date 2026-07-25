@@ -24,6 +24,9 @@ func NewSQLiteStore(path string) (*SQLiteStore, error) {
 		return nil, fmt.Errorf("open sqlite: %w", err)
 	}
 	db.SetMaxOpenConns(1)
+	if _, err := db.Exec("PRAGMA journal_mode=WAL"); err != nil {
+		return nil, fmt.Errorf("wal: %w", err)
+	}
 
 	s := &SQLiteStore{db: db}
 	if err := s.migrate(); err != nil {
