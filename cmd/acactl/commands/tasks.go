@@ -11,11 +11,13 @@ import (
 
 func Tasks(acaPort int, projectID, status string) error {
 	url := fmt.Sprintf("http://127.0.0.1:%d/api/tasks", acaPort)
+	sep := "?"
 	if projectID != "" {
 		url += "?project_id=" + projectID
+		sep = "&"
 	}
 	if status != "" {
-		url += "&status=" + status
+		url += sep + "status=" + status
 	}
 
 	resp, err := http.Get(url)

@@ -9,7 +9,10 @@ import (
 )
 
 func CreateProject(acaPort int, name, description string) error {
-	body, _ := json.Marshal(map[string]string{"name": name, "description": description})
+	body, err := json.Marshal(map[string]string{"name": name, "description": description})
+	if err != nil {
+		return fmt.Errorf("marshal: %w", err)
+	}
 	resp, err := http.Post(
 		fmt.Sprintf("http://127.0.0.1:%d/api/projects", acaPort),
 		"application/json",
@@ -19,6 +22,10 @@ func CreateProject(acaPort int, name, description string) error {
 		return fmt.Errorf("acasched unreachable: %w", err)
 	}
 	defer resp.Body.Close()
+
+	if resp.StatusCode >= 300 {
+		return fmt.Errorf("acasched returned %d", resp.StatusCode)
+	}
 
 	var result map[string]interface{}
 	json.NewDecoder(resp.Body).Decode(&result)

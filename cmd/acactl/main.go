@@ -30,6 +30,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "  up       Start all infrastructure\n")
 		fmt.Fprintf(os.Stderr, "  down     Stop all services\n")
 		fmt.Fprintf(os.Stderr, "  status   Check service health\n")
+		fmt.Fprintf(os.Stderr, "  run      Dispatch a task and wait for completion\n")
 		fmt.Fprintf(os.Stderr, "  tasks    List tasks\n")
 		fmt.Fprintf(os.Stderr, "  logs     View task execution logs\n")
 		fmt.Fprintf(os.Stderr, "  project  Create a project\n")
@@ -64,6 +65,19 @@ func main() {
 		}
 	case "status":
 		if err := commands.Status(ports); err != nil {
+			fmt.Fprintf(os.Stderr, "error: %v\n", err)
+			os.Exit(1)
+		}
+	case "run":
+		fs := flag.NewFlagSet("run", flag.ExitOnError)
+		goal := fs.String("goal", "", "Task goal (required)")
+		project := fs.String("project", "", "Project ID (auto-created if empty)")
+		fs.Parse(os.Args[2:])
+		if *goal == "" {
+			fs.Usage()
+			os.Exit(1)
+		}
+		if err := commands.Run(ports[2], *goal, *project); err != nil {
 			fmt.Fprintf(os.Stderr, "error: %v\n", err)
 			os.Exit(1)
 		}
