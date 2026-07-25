@@ -3,12 +3,11 @@ package main
 import (
 	"context"
 	"flag"
-	"fmt"
 	"log"
-	"net/http"
 	"os/signal"
 	"syscall"
 
+	"adversarychef/acasched/internal/api"
 	"adversarychef/acasched/internal/goose"
 	"adversarychef/acasched/internal/scheduler"
 	"adversarychef/acasched/internal/store"
@@ -41,7 +40,7 @@ func main() {
 
 	disp := scheduler.NewDispatcher(s, runner)
 	go disp.Run(ctx)
-	go runAPI(ctx, s, *port)
+	go api.RunAPI(ctx, s, *port)
 	go scheduler.RunReaper(s, 30)
 
 	log.Printf("acasched started on :%d", *port)
@@ -49,34 +48,4 @@ func main() {
 	log.Println("acasched shutting down")
 }
 
-func runAPI(ctx context.Context, s *store.Store, port int) {
-	mux := http.NewServeMux()
 
-	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		fmt.Fprint(w, `{"status":"ok"}`)
-	})
-
-	// MCP endpoint stub — to be expanded in a future task
-	mux.HandleFunc("/mcp", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusNotImplemented)
-		fmt.Fprint(w, `{"error":"mcp endpoint not yet implemented"}`)
-	})
-
-	server := &http.Server{
-		Addr:    fmt.Sprintf(":%d", port),
-		Handler: mux,
-	}
-
-	go func() {
-		<-ctx.Done()
-		server.Shutdown(context.Background())
-	}()
-
-	log.Printf("api: listening on :%d", port)
-	if err := server.ListenAndServe(); err != http.ErrServerClosed {
-		log.Printf("api: %v", err)
-	}
-}
