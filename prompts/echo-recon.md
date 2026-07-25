@@ -17,7 +17,7 @@
 
 ## Kali Toolkit
 
-All Kali recon tools are orchestrated through the `kali-toolkit` skill. Match tasks to playbooks by trigger keywords:
+All Kali recon tools are orchestrated through the `kali` skill. Match tasks to playbooks by trigger keywords:
 
 | Playbook | Trigger Keywords | Level |
 |----------|-----------------|:-----:|

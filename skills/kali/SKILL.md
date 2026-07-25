@@ -1,5 +1,5 @@
 ---
-name: kali-toolkit
+name: kali
 description: Kali Linux tool orchestration via kali-mcp. Routes reconnaissance tasks to the correct playbook and enforces tool escalation boundaries.
 ---
 
