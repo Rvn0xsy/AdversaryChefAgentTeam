@@ -38,7 +38,6 @@ func (r *Runner) Execute(ctx context.Context, task *store.Task) (*Result, error)
 	args := []string{
 		"run",
 		"--instructions", tmpFile.Name(),
-		"--text", task.Description,
 		"--max-turns", fmt.Sprintf("%d", task.MaxTurns),
 		"--no-session",
 		"--output-format", "stream-json",
@@ -110,13 +109,16 @@ func (r *Runner) buildPrompt(task *store.Task) string {
 project_id: %s
 task_id: %s
 
+## Task
+%s
+
 ## Task Lifecycle
 - Use scheduler_create_task to delegate work
 - Use scheduler_complete_task to mark yourself done
 - Do NOT exit without calling scheduler_complete_task
 
 ---
-%s`, task.ProjectID, task.ID, agentPrompt)
+%s`, task.ProjectID, task.ID, task.Description, agentPrompt)
 }
 
 type Result struct {
