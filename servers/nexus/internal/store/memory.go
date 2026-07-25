@@ -16,15 +16,33 @@ type MemoryStore struct {
 	clues       map[string]*models.Clue
 	credentials map[string]*models.Credential
 	worklogs    map[string]*models.WorkLog
+
+	// Graph tables
+	hosts            map[string]*models.HostNode
+	services         map[string]*models.ServiceNode
+	endpoints        map[string]*models.EndpointNode
+	sessions         map[string]*models.SessionNode
+	evidenceNodes    map[string]*models.EvidenceNode
+	hypotheses       map[string]*models.HypothesisNode
+	vulnerabilities  map[string]*models.VulnerabilityNode
+	edges            map[string]*models.GraphEdge
 }
 
 func NewMemoryStore() *MemoryStore {
 	return &MemoryStore{
-		projects:    make(map[string]*models.Project),
-		assets:      make(map[string]*models.Asset),
-		clues:       make(map[string]*models.Clue),
-		credentials: make(map[string]*models.Credential),
-		worklogs:    make(map[string]*models.WorkLog),
+		projects:        make(map[string]*models.Project),
+		assets:          make(map[string]*models.Asset),
+		clues:           make(map[string]*models.Clue),
+		credentials:     make(map[string]*models.Credential),
+		worklogs:        make(map[string]*models.WorkLog),
+		hosts:           make(map[string]*models.HostNode),
+		services:        make(map[string]*models.ServiceNode),
+		endpoints:       make(map[string]*models.EndpointNode),
+		sessions:        make(map[string]*models.SessionNode),
+		evidenceNodes:   make(map[string]*models.EvidenceNode),
+		hypotheses:      make(map[string]*models.HypothesisNode),
+		vulnerabilities: make(map[string]*models.VulnerabilityNode),
+		edges:           make(map[string]*models.GraphEdge),
 	}
 }
 
@@ -365,4 +383,376 @@ func containsAny(lower string, values []string) bool {
 		}
 	}
 	return false
+}
+
+// ---------------------------------------------------------------------------
+// Host stubs (OperationStore)
+// ---------------------------------------------------------------------------
+
+func (s *MemoryStore) ListHosts(projectID string) ([]models.HostNode, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	out := make([]models.HostNode, 0)
+	for _, h := range s.hosts {
+		if h.ProjectID == projectID {
+			out = append(out, *h)
+		}
+	}
+	return out, nil
+}
+
+func (s *MemoryStore) GetHost(id string) (*models.HostNode, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	h, ok := s.hosts[id]
+	if !ok {
+		return nil, fmt.Errorf("host not found: %s", id)
+	}
+	return h, nil
+}
+
+func (s *MemoryStore) CreateHost(h *models.HostNode) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if h.ID == "" {
+		h.ID = genID("host")
+	}
+	h.CreatedAt = time.Now()
+	s.hosts[h.ID] = h
+	return nil
+}
+
+func (s *MemoryStore) UpdateHost(h *models.HostNode) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if _, ok := s.hosts[h.ID]; !ok {
+		return fmt.Errorf("host not found: %s", h.ID)
+	}
+	s.hosts[h.ID] = h
+	return nil
+}
+
+func (s *MemoryStore) DeleteHost(id string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	delete(s.hosts, id)
+	return nil
+}
+
+// ---------------------------------------------------------------------------
+// Service stubs (OperationStore)
+// ---------------------------------------------------------------------------
+
+func (s *MemoryStore) ListServices(projectID string) ([]models.ServiceNode, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	out := make([]models.ServiceNode, 0)
+	for _, sv := range s.services {
+		if sv.ProjectID == projectID {
+			out = append(out, *sv)
+		}
+	}
+	return out, nil
+}
+
+func (s *MemoryStore) GetService(id string) (*models.ServiceNode, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	sv, ok := s.services[id]
+	if !ok {
+		return nil, fmt.Errorf("service not found: %s", id)
+	}
+	return sv, nil
+}
+
+func (s *MemoryStore) CreateService(sv *models.ServiceNode) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if sv.ID == "" {
+		sv.ID = genID("svc")
+	}
+	sv.CreatedAt = time.Now()
+	s.services[sv.ID] = sv
+	return nil
+}
+
+func (s *MemoryStore) UpdateService(sv *models.ServiceNode) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if _, ok := s.services[sv.ID]; !ok {
+		return fmt.Errorf("service not found: %s", sv.ID)
+	}
+	s.services[sv.ID] = sv
+	return nil
+}
+
+func (s *MemoryStore) DeleteService(id string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	delete(s.services, id)
+	return nil
+}
+
+// ---------------------------------------------------------------------------
+// Endpoint stubs (OperationStore)
+// ---------------------------------------------------------------------------
+
+func (s *MemoryStore) ListEndpoints(projectID string) ([]models.EndpointNode, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	out := make([]models.EndpointNode, 0)
+	for _, ep := range s.endpoints {
+		if ep.ProjectID == projectID {
+			out = append(out, *ep)
+		}
+	}
+	return out, nil
+}
+
+func (s *MemoryStore) GetEndpoint(id string) (*models.EndpointNode, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	ep, ok := s.endpoints[id]
+	if !ok {
+		return nil, fmt.Errorf("endpoint not found: %s", id)
+	}
+	return ep, nil
+}
+
+func (s *MemoryStore) CreateEndpoint(ep *models.EndpointNode) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if ep.ID == "" {
+		ep.ID = genID("ep")
+	}
+	ep.CreatedAt = time.Now()
+	s.endpoints[ep.ID] = ep
+	return nil
+}
+
+func (s *MemoryStore) UpdateEndpointStatus(id, status, testedBy string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	ep, ok := s.endpoints[id]
+	if !ok {
+		return fmt.Errorf("endpoint not found: %s", id)
+	}
+	ep.Status = status
+	ep.TestedBy = testedBy
+	return nil
+}
+
+func (s *MemoryStore) GetUntestedEndpoints(projectID string) ([]models.EndpointNode, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	out := make([]models.EndpointNode, 0)
+	for _, ep := range s.endpoints {
+		if ep.ProjectID == projectID && ep.Status == "discovered" {
+			out = append(out, *ep)
+		}
+	}
+	return out, nil
+}
+
+// ---------------------------------------------------------------------------
+// Session stubs (OperationStore)
+// ---------------------------------------------------------------------------
+
+func (s *MemoryStore) ListSessions(projectID string) ([]models.SessionNode, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	out := make([]models.SessionNode, 0)
+	for _, sn := range s.sessions {
+		if sn.ProjectID == projectID {
+			out = append(out, *sn)
+		}
+	}
+	return out, nil
+}
+
+func (s *MemoryStore) GetSession(id string) (*models.SessionNode, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	sn, ok := s.sessions[id]
+	if !ok {
+		return nil, fmt.Errorf("session not found: %s", id)
+	}
+	return sn, nil
+}
+
+func (s *MemoryStore) CreateSession(sn *models.SessionNode) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if sn.ID == "" {
+		sn.ID = genID("sess")
+	}
+	sn.CreatedAt = time.Now()
+	s.sessions[sn.ID] = sn
+	return nil
+}
+
+func (s *MemoryStore) DeleteSession(id string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	delete(s.sessions, id)
+	return nil
+}
+
+// ---------------------------------------------------------------------------
+// Evidence stubs (ReasoningStore)
+// ---------------------------------------------------------------------------
+
+func (s *MemoryStore) ListEvidence(projectID string) ([]models.EvidenceNode, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	out := make([]models.EvidenceNode, 0)
+	for _, ev := range s.evidenceNodes {
+		if ev.ProjectID == projectID {
+			out = append(out, *ev)
+		}
+	}
+	return out, nil
+}
+
+func (s *MemoryStore) CreateEvidence(ev *models.EvidenceNode) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if ev.ID == "" {
+		ev.ID = genID("evid")
+	}
+	ev.CreatedAt = time.Now()
+	s.evidenceNodes[ev.ID] = ev
+	return nil
+}
+
+// ---------------------------------------------------------------------------
+// Hypothesis stubs (ReasoningStore)
+// ---------------------------------------------------------------------------
+
+func (s *MemoryStore) ListHypotheses(projectID string) ([]models.HypothesisNode, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	out := make([]models.HypothesisNode, 0)
+	for _, hy := range s.hypotheses {
+		if hy.ProjectID == projectID {
+			out = append(out, *hy)
+		}
+	}
+	return out, nil
+}
+
+func (s *MemoryStore) CreateHypothesis(hy *models.HypothesisNode) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if hy.ID == "" {
+		hy.ID = genID("hyp")
+	}
+	hy.CreatedAt = time.Now()
+	s.hypotheses[hy.ID] = hy
+	return nil
+}
+
+func (s *MemoryStore) UpdateHypothesisStatus(id, status string, confidence float64) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	hy, ok := s.hypotheses[id]
+	if !ok {
+		return fmt.Errorf("hypothesis not found: %s", id)
+	}
+	hy.Status = status
+	hy.Confidence = confidence
+	return nil
+}
+
+// ---------------------------------------------------------------------------
+// Vulnerability stubs (ReasoningStore)
+// ---------------------------------------------------------------------------
+
+func (s *MemoryStore) ListVulnerabilities(projectID string) ([]models.VulnerabilityNode, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	out := make([]models.VulnerabilityNode, 0)
+	for _, vn := range s.vulnerabilities {
+		if vn.ProjectID == projectID {
+			out = append(out, *vn)
+		}
+	}
+	return out, nil
+}
+
+func (s *MemoryStore) CreateVulnerability(vn *models.VulnerabilityNode) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if len(vn.EvidenceRefs) == 0 {
+		return fmt.Errorf("vulnerability must have at least one evidence reference")
+	}
+	if vn.ID == "" {
+		vn.ID = genID("vuln")
+	}
+	vn.CreatedAt = time.Now()
+	s.vulnerabilities[vn.ID] = vn
+	return nil
+}
+
+func (s *MemoryStore) UpdateVulnerability(vn *models.VulnerabilityNode) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if _, ok := s.vulnerabilities[vn.ID]; !ok {
+		return fmt.Errorf("vulnerability not found: %s", vn.ID)
+	}
+	s.vulnerabilities[vn.ID] = vn
+	return nil
+}
+
+// ---------------------------------------------------------------------------
+// GraphEdge stubs (GraphEdgeStore)
+// ---------------------------------------------------------------------------
+
+func (s *MemoryStore) CreateEdge(e *models.GraphEdge) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if e.ID == "" {
+		e.ID = genID("edge")
+	}
+	e.CreatedAt = time.Now()
+	s.edges[e.ID] = e
+	return nil
+}
+
+func (s *MemoryStore) ListEdges(projectID, fromID, toID string) ([]models.GraphEdge, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	out := make([]models.GraphEdge, 0)
+	for _, e := range s.edges {
+		if e.ProjectID != projectID {
+			continue
+		}
+		if fromID != "" && e.FromID != fromID {
+			continue
+		}
+		if toID != "" && e.ToID != toID {
+			continue
+		}
+		out = append(out, *e)
+	}
+	return out, nil
+}
+
+func (s *MemoryStore) DeleteEdge(id string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	delete(s.edges, id)
+	return nil
+}
+
+// ---------------------------------------------------------------------------
+// GraphQuery / GraphTrace stubs (not-implemented for memory store)
+// ---------------------------------------------------------------------------
+
+func (s *MemoryStore) GraphQuery(projectID, startNodeID string, maxHops int) (*models.Subgraph, error) {
+	return nil, fmt.Errorf("GraphQuery: not implemented for in-memory store")
+}
+
+func (s *MemoryStore) GraphTrace(projectID, nodeID string) (*models.TraceResult, error) {
+	return nil, fmt.Errorf("GraphTrace: not implemented for in-memory store")
 }
