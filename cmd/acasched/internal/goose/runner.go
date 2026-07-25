@@ -15,10 +15,10 @@ import (
 )
 
 type Runner struct {
-	PromptsDir string                 // e.g., "prompts"
-	SkillsDir  string                 // e.g., "skills"
+	PromptsDir string            // e.g., "prompts"
+	SkillsDir  string            // e.g., "skills"
 	LogDir     string
-	Registry   map[string]string      // loaded from _mcp-registry.yaml
+	Registry   map[string]string // loaded from _mcp-registry.yaml
 }
 
 func (r *Runner) Execute(ctx context.Context, task *store.Task) (*Result, error) {
@@ -36,39 +36,38 @@ func (r *Runner) Execute(ctx context.Context, task *store.Task) (*Result, error)
 		agentPromptStr = string(agentPromptBytes)
 	}
 
-	prompt := r.buildPrompt(task, agentPromptStr)
-	tmpFile, err := os.CreateTemp("", "goose-instructions-*.md")
+	// Write agent prompt to temp file → mounted as system.md in container
+	sysFile, err := os.CreateTemp("", "goose-system-*.md")
 	if err != nil {
-		return nil, fmt.Errorf("create temp file: %w", err)
+		return nil, fmt.Errorf("create system temp file: %w", err)
 	}
-	if _, err := tmpFile.WriteString(prompt); err != nil {
-		tmpFile.Close()
-		os.Remove(tmpFile.Name())
-		return nil, fmt.Errorf("write temp file: %w", err)
+	if _, err := sysFile.WriteString(agentPromptStr); err != nil {
+		sysFile.Close()
+		os.Remove(sysFile.Name())
+		return nil, fmt.Errorf("write system temp file: %w", err)
 	}
-	tmpFile.Close()
-	defer os.Remove(tmpFile.Name())
+	sysFile.Close()
+	defer os.Remove(sysFile.Name())
 
+	// Write task instructions to temp file → mounted as instructions.md in container
+	prompt := r.buildPrompt(task, agentPromptStr)
+	instFile, err := os.CreateTemp("", "goose-instructions-*.md")
+	if err != nil {
+		return nil, fmt.Errorf("create instructions temp file: %w", err)
+	}
+	if _, err := instFile.WriteString(prompt); err != nil {
+		instFile.Close()
+		os.Remove(instFile.Name())
+		return nil, fmt.Errorf("write instructions temp file: %w", err)
+	}
+	instFile.Close()
+	defer os.Remove(instFile.Name())
+
+	// Build docker run args: volumes first, then image + goose subcommand
 	args := []string{
-		"run",
-		"--instructions", tmpFile.Name(),
-		"--max-turns", fmt.Sprintf("%d", task.MaxTurns),
-		"--no-session",
-		"--output-format", "stream-json",
-		"--no-profile",
-	}
-
-	// Parse prompt for MCP requirements
-	meta := ParsePromptMeta(agentPromptBytes)
-
-	// Mount only required MCP extensions from registry
-	for _, mcpName := range meta.Requires {
-		url, ok := r.Registry[mcpName]
-		if !ok {
-			log.Printf("runner: MCP %q not found in registry, skipping", mcpName)
-			continue
-		}
-		args = append(args, "--with-streamable-http-extension", url)
+		"run", "--rm", "--network", "host",
+		"-v", sysFile.Name() + ":/root/.config/goose/prompts/system.md:ro",
+		"-v", instFile.Name() + ":/tmp/instructions.md:ro",
 	}
 
 	// Mount _shared skills (always)
@@ -84,6 +83,9 @@ func (r *Runner) Execute(ctx context.Context, task *store.Task) (*Result, error)
 		}
 	}
 
+	// Parse prompt for MCP and skills requirements
+	meta := ParsePromptMeta(agentPromptBytes)
+
 	// Mount agent-specific skills from prompt metadata
 	for _, skill := range meta.Skills {
 		hostPath := filepath.Join(r.SkillsDir, skill)
@@ -96,7 +98,24 @@ func (r *Runner) Execute(ctx context.Context, task *store.Task) (*Result, error)
 		args = append(args, "-v", hostPath+":"+containerPath+":ro")
 	}
 
-	cmd := exec.CommandContext(ctx, "goose", args...)
+	// Append goose image and goose run subcommand
+	args = append(args, "goose", "run",
+		"--instructions", "/tmp/instructions.md",
+		"--max-turns", fmt.Sprintf("%d", task.MaxTurns),
+		"--output-format", "stream-json",
+	)
+
+	// Mount only required MCP extensions from registry
+	for _, mcpName := range meta.Requires {
+		url, ok := r.Registry[mcpName]
+		if !ok {
+			log.Printf("runner: MCP %q not found in registry, skipping", mcpName)
+			continue
+		}
+		args = append(args, "--with-streamable-http-extension", url)
+	}
+
+	cmd := exec.CommandContext(ctx, "docker", args...)
 
 	if r.LogDir != "" {
 		os.MkdirAll(r.LogDir, 0755)
@@ -125,15 +144,15 @@ func (r *Runner) Execute(ctx context.Context, task *store.Task) (*Result, error)
 		pw.Close() // signal EOF to the pipe reader
 		<-done     // wait for the copy to complete
 		if err != nil {
-			return nil, fmt.Errorf("goose exited: %w", err)
+			return nil, fmt.Errorf("docker exited: %w", err)
 		}
 		return parseStreamOutput(buf.String()), nil
 	}
 
-	// Fallback when LogDir is empty (existing behavior)
+	// Fallback when LogDir is empty
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return nil, fmt.Errorf("goose exited: %w, output: %s", err, string(output))
+		return nil, fmt.Errorf("docker exited: %w, output: %s", err, string(output))
 	}
 	return parseStreamOutput(string(output)), nil
 }
