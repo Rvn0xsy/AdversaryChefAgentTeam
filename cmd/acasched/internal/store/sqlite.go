@@ -118,10 +118,18 @@ func (s *Store) ListPending(projectID string) ([]Task, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	rows, err := s.db.Query(
-		`SELECT id, project_id, parent_id, agent, status, title, description, result, error, created_by, max_turns, timeout_secs, retry_count, attempt, created_at FROM tasks WHERE project_id = ? AND status = 'pending' ORDER BY created_at ASC`,
-		projectID,
-	)
+	var rows *sql.Rows
+	var err error
+	if projectID == "" {
+		rows, err = s.db.Query(
+			`SELECT id, project_id, parent_id, agent, status, title, description, result, error, created_by, max_turns, timeout_secs, retry_count, attempt, created_at FROM tasks WHERE status = 'pending' ORDER BY created_at ASC`,
+		)
+	} else {
+		rows, err = s.db.Query(
+			`SELECT id, project_id, parent_id, agent, status, title, description, result, error, created_by, max_turns, timeout_secs, retry_count, attempt, created_at FROM tasks WHERE project_id = ? AND status = 'pending' ORDER BY created_at ASC`,
+			projectID,
+		)
+	}
 	if err != nil {
 		return nil, err
 	}
