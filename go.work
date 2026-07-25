@@ -1,6 +1,7 @@
 go 1.26.4
 
 use (
+	./cmd/acactl
 	./cmd/acasched
 	./pkg/mcputil
 	./servers/kali
