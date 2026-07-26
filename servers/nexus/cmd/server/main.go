@@ -26,7 +26,13 @@ func main() {
 		schedulerURL = "http://127.0.0.1:9090"
 	}
 
+	webhookURL := os.Getenv("ACASCHED_WEBHOOK_URL")
+	if webhookURL == "" {
+		webhookURL = "http://127.0.0.1:9090/api/events"
+	}
+	eventedStore := store.NewEventedStore(s, webhookURL)
+
 	mcputil.Run(cfg, func(server *mcp.Server) {
-		tools.RegisterAllV3(server, s, sessionMap, schedulerURL)
+		tools.RegisterAllV3(server, eventedStore, sessionMap, schedulerURL)
 	}, sessionMap)
 }

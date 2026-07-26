@@ -29,7 +29,13 @@ logs/
 repo/
 # Nuclei official templates (managed by update-nuclei-templates.sh)
 data/nuclei-templates/
-server
-acactl
+/server
+/acactl
 /acasched
 .worktrees/
+
+# Database files
+*.db
+*.db-shm
+*.db-wal
+acasched.db*

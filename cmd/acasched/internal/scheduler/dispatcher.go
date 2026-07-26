@@ -3,6 +3,7 @@ package scheduler
 import (
 	"context"
 	"log"
+	"strings"
 	"time"
 
 	"adversarychef/acasched/internal/goose"
@@ -56,6 +57,9 @@ func (d *Dispatcher) dispatchOne(task store.Task) {
 	defer func() {
 		cancel()
 		delete(d.running, task.ID)
+		if strings.Contains(task.Agent, "supervisor") {
+			SupervisorDone(task.ProjectID)
+		}
 	}()
 
 	TransitionToRunning(d.store, task.ID)

@@ -33,6 +33,15 @@
 
 ### Before Any Session Operation
 
+## 🛑 Step 0: Pre-flight Gate
+
+Query nexus-mcp: `vulnerability_list` + `session_list`.
+
+| Check | Action |
+|-------|--------|
+| Confirmed vuln(status=confirmed) exists OR active session exists | ✅ Proceed |
+| Neither exists | ❌ `scheduler_complete_task("No vulnerability confirmed or session active. Need AC-Breach to verify first.")` — STOP |
+
 1. ALWAYS call `mythic_list_callbacks` first to confirm the callback is active.
 2. ALWAYS call `mythic_get_callback` to understand: OS, user, privileges, IPs.
 3. ALWAYS call `mythic_get_callback_commands` to discover available commands and their exact parameter names before tasking.

@@ -3,6 +3,7 @@ package store
 import (
 	"database/sql"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -287,6 +288,52 @@ func (s *Store) UpdateProject(id, name, description, status string) error {
 	query := "UPDATE projects SET name=?, description=?, status=? WHERE id=?"
 	_, err := s.db.Exec(query, name, description, status, id)
 	return err
+}
+
+// ListTasks returns all tasks for a project, optionally filtered by status.
+// statusFilter is a comma-separated list like "pending,running". Empty means all.
+func (s *Store) ListTasks(projectID string, statusFilter string) ([]Task, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	var rows *sql.Rows
+	var err error
+
+	if statusFilter == "" {
+		rows, err = s.db.Query(
+			`SELECT id, project_id, parent_id, agent, status, title, description, result, error, created_by, max_turns, timeout_secs, retry_count, attempt, created_at FROM tasks WHERE project_id = ? ORDER BY created_at ASC`,
+			projectID)
+	} else {
+		// Build IN clause: status IN ('pending','running')
+		statuses := strings.Split(statusFilter, ",")
+		placeholders := make([]string, len(statuses))
+		args := make([]any, 0, len(statuses)+1)
+		args = append(args, projectID)
+		for i, st := range statuses {
+			placeholders[i] = "?"
+			args = append(args, strings.TrimSpace(st))
+		}
+		query := fmt.Sprintf(
+			`SELECT id, project_id, parent_id, agent, status, title, description, result, error, created_by, max_turns, timeout_secs, retry_count, attempt, created_at FROM tasks WHERE project_id = ? AND status IN (%s) ORDER BY created_at ASC`,
+			strings.Join(placeholders, ","))
+		rows, err = s.db.Query(query, args...)
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var tasks []Task
+	for rows.Next() {
+		var t Task
+		var ct string
+		if err := rows.Scan(&t.ID, &t.ProjectID, &t.ParentID, &t.Agent, &t.Status, &t.Title, &t.Description, &t.Result, &t.Error, &t.CreatedBy, &t.MaxTurns, &t.TimeoutSecs, &t.RetryCount, &t.Attempt, &ct); err != nil {
+			return nil, err
+		}
+		t.CreatedAt, _ = time.Parse(time.RFC3339, ct)
+		tasks = append(tasks, t)
+	}
+	return tasks, rows.Err()
 }
 
 func (s *Store) ListTasksByProject(projectID string) ([]Task, error) {

@@ -24,9 +24,16 @@
 {{TOOLS_KALI}}
 {{TOOLS_NEXUS}}
 
-## Workflow
+## 🛑 Step 0: Pre-flight Gate
 
-### Phase 1: Situational Awareness
+Query nexus-mcp: `session_list`.
+
+| Check | Action |
+|-------|--------|
+| Active session exists | ✅ Proceed |
+| No active session | ❌ `scheduler_complete_task("No active C2 session. Need AC-Ghost to deploy first.")` — STOP |
+
+## Workflow
 Upon receiving a session handoff from AC-Ghost:
 
 1. Use `session_list` to confirm the session state and review what sessions exist.

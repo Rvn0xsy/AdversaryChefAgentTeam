@@ -13,6 +13,34 @@ import (
 
 // registerSchedulerBridge registers tools for the scheduler integration bridge.
 func registerSchedulerBridge(server *mcp.Server, sm *mcputil.SessionMap, schedulerURL string) {
+	// scheduler_list_tasks — list tasks for a project
+	mcputil.AddLoggingTool(server, &mcp.Tool{
+		Name:        "scheduler_list_tasks",
+		Description: "List tasks for a project, optionally filtered by status (comma-separated: pending,running,done,failed)",
+	}, func(ctx context.Context, req *mcp.CallToolRequest, params struct {
+		ProjectID string `json:"project_id,omitempty" jsonschema:"Project ID (auto-injected from session)"`
+		Status    string `json:"status,omitempty" jsonschema:"Status filter: pending,running,done,failed,timeout (comma-separated, omit for all)"`
+	}) (*mcp.CallToolResult, any, error) {
+		projectID := mcputil.ProjectIDFromContext(ctx)
+		if projectID == "" { projectID = params.ProjectID }
+		if projectID == "" {
+			return mcputil.TextResult("project_id not found in session context"), nil, nil
+		}
+		url := schedulerURL + "/api/tasks?project_id=" + projectID
+		if params.Status != "" {
+			url += "&status=" + params.Status
+		}
+		resp, err := http.Get(url)
+		if err != nil {
+			return mcputil.TextResult("scheduler unreachable: " + err.Error()), nil, nil
+		}
+		defer resp.Body.Close()
+		var tasks []map[string]any
+		json.NewDecoder(resp.Body).Decode(&tasks)
+		b, _ := json.Marshal(tasks)
+		return mcputil.TextResult(string(b)), nil, nil
+	})
+
 	// scheduler_create_task — forward to acasched
 	mcputil.AddLoggingTool(server, &mcp.Tool{
 		Name:        "scheduler_create_task",

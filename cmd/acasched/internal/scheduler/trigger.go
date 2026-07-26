@@ -2,6 +2,7 @@ package scheduler
 
 import (
 	"fmt"
+	"strings"
 
 	"adversarychef/acasched/internal/store"
 )
@@ -27,6 +28,14 @@ func TriggerParent(s *store.Store, parentID string) {
 
 	parent, err := s.GetTask(parentID)
 	if err != nil {
+		return
+	}
+
+	// If the parent is a supervisor, enqueue an event instead of setting pending
+	if strings.Contains(parent.Agent, "supervisor") {
+		if len(children) > 0 {
+			EnqueueEvent(children[0].ProjectID)
+		}
 		return
 	}
 

@@ -19,6 +19,7 @@ func RunAPI(ctx context.Context, s *store.Store, logDir string, port int) {
 	mux.HandleFunc("/api/projects", handleProjects(s))
 	mux.HandleFunc("/api/projects/", handleProjectByID(s))
 	mux.HandleFunc("GET /api/projects/{id}/tasks", handleProjectTasks(s))
+	mux.HandleFunc("/api/events", handleEvents(s))
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)

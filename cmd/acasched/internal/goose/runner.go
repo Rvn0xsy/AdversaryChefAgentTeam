@@ -75,6 +75,9 @@ func (r *Runner) Execute(ctx context.Context, task *store.Task) (*Result, error)
 
 	// Mount _shared skills (always)
 	sharedSkillsDir := filepath.Join(r.SkillsDir, "_shared")
+	if absShared, err := filepath.Abs(sharedSkillsDir); err == nil {
+		sharedSkillsDir = absShared
+	}
 	if entries, err := os.ReadDir(sharedSkillsDir); err == nil {
 		for _, entry := range entries {
 			if !entry.IsDir() {
@@ -91,7 +94,11 @@ func (r *Runner) Execute(ctx context.Context, task *store.Task) (*Result, error)
 
 	// Mount agent-specific skills from prompt metadata
 	for _, skill := range meta.Skills {
-		hostPath := filepath.Join(r.SkillsDir, skill)
+		hostPath, err := filepath.Abs(filepath.Join(r.SkillsDir, skill))
+		if err != nil {
+			log.Printf("runner: skill dir %q abs error: %v, skipping", skill, err)
+			continue
+		}
 		if _, err := os.Stat(hostPath); os.IsNotExist(err) {
 			log.Printf("runner: skill dir %q not found, skipping", hostPath)
 			continue

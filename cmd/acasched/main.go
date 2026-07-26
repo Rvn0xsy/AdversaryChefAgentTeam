@@ -57,6 +57,8 @@ func main() {
 	go disp.Run(ctx)
 	go api.RunAPI(ctx, s, *logDir, *port)
 	go scheduler.RunReaper(s, 30*time.Second)
+	go scheduler.RunEventLoop(ctx, s)
+	go scheduler.RunFallbackPoll(ctx, s)
 
 	log.Printf("acasched started on :%d", *port)
 	<-ctx.Done()

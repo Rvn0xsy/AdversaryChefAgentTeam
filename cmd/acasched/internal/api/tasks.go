@@ -13,7 +13,8 @@ func handleTasks(s *store.Store) http.HandlerFunc {
 		switch r.Method {
 		case "GET":
 			projectID := r.URL.Query().Get("project_id")
-			tasks, err := s.ListPending(projectID)
+			statusFilter := r.URL.Query().Get("status") // comma-separated, e.g. "pending,running"
+			tasks, err := s.ListTasks(projectID, statusFilter)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
