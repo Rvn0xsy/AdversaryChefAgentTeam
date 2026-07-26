@@ -2,6 +2,7 @@
 package commands
 
 import (
+	"adversarychef/acactl/display"
 	"bufio"
 	"bytes"
 	"context"
@@ -192,15 +193,6 @@ func streamTask(client *http.Client, base, taskID string) error {
 
 	sseDone := make(chan struct{})
 
-	var textBuf strings.Builder
-	flushText := func() {
-		t := strings.TrimSpace(textBuf.String())
-		if t != "" {
-			fmt.Printf("  ✦ %s\n\n", t)
-			textBuf.Reset()
-		}
-	}
-
 	go func() {
 		defer close(sseDone)
 		scanner := bufio.NewScanner(sseResp.Body)
@@ -223,65 +215,10 @@ func streamTask(client *http.Client, base, taskID string) error {
 			}
 
 			if msg.Type == "message" && msg.Message != nil && msg.Message.Role == "assistant" {
-				var blocks []struct {
-					Type         string `json:"type"`
-					Text         string `json:"text"`
-					Thinking     string `json:"thinking"`
-					ToolCall     *struct {
-						Status string `json:"status"`
-						Value  struct {
-							Name      string                 `json:"name"`
-							Arguments map[string]interface{} `json:"arguments"`
-						} `json:"value"`
-					} `json:"toolCall,omitempty"`
-					ToolResponse *struct {
-						Status string `json:"status"`
-						Value  string `json:"value"`
-					} `json:"toolResponse,omitempty"`
-					Meta *struct {
-						GooseExtension string `json:"goose_extension"`
-					} `json:"_meta,omitempty"`
+				lines := display.FormatMessage([]byte(payload))
+				for _, l := range lines {
+					fmt.Println(l)
 				}
-				if json.Unmarshal(msg.Message.Content, &blocks) == nil {
-					for _, b := range blocks {
-						switch b.Type {
-						case "text":
-							textBuf.WriteString(b.Text)
-						case "thinking":
-							// skip
-						case "toolRequest":
-							flushText()
-							if b.ToolCall != nil {
-								server := ""
-								if b.Meta != nil {
-									server = b.Meta.GooseExtension
-								}
-								name := b.ToolCall.Value.Name
-								if idx := strings.Index(name, "__"); idx > 0 {
-									if server == "" {
-										server = name[:idx]
-									}
-									name = name[idx+2:]
-								}
-								fmt.Printf("  \033[90m▸\033[0m \033[36m[%s]\033[0m %s\n", resolveMCPName(server), name)
-								for k, v := range b.ToolCall.Value.Arguments {
-									fmt.Printf("    \033[90m%s:\033[0m %v\n", k, v)
-								}
-							}
-						case "toolResponse":
-							if b.ToolResponse != nil && b.ToolResponse.Value != "" {
-								val := b.ToolResponse.Value
-								if len(val) > 500 {
-									val = val[:500] + "..."
-								}
-								fmt.Printf("    → %s\n", val)
-							}
-						}
-					}
-				}
-			}
-			if msg.Type == "complete" {
-				flushText()
 			}
 		}
 	}()
@@ -295,7 +232,6 @@ func streamTask(client *http.Client, base, taskID string) error {
 		case "done", "failed", "timeout":
 			cancel()
 			<-sseDone
-			flushText()
 			return nil
 		}
 	}
@@ -359,21 +295,4 @@ func getTaskAgent(client *http.Client, base, taskID string) string {
 	var t struct{ Agent string `json:"agent"` }
 	json.NewDecoder(resp.Body).Decode(&t)
 	return strings.TrimPrefix(t.Agent, "red-team/")
-}
-
-// resolveMCPName maps goose extension keys (127_0_0_1_8080) to human-readable MCP names.
-func resolveMCPName(key string) string {
-	if key == "" {
-		return "mcp"
-	}
-	if name, ok := mcpDisplayNames[key]; ok {
-		return name
-	}
-	// Try port-only match (strip IP prefix)
-	if idx := strings.LastIndex(key, "_"); idx > 0 {
-		if name, ok := mcpDisplayNames["127_0_0_1_"+key[idx+1:]]; ok {
-			return name
-		}
-	}
-	return key
 }
