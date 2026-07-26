@@ -75,7 +75,7 @@ Agent writes to nexus graph
 - Branch naming: `<type>/<description>` (feat/, fix/, docs/, refactor/, prompt/)
 - Commit messages: `<type>: <description>`
 - PR template: `.github/PULL_REQUEST_TEMPLATE.md`
-- CI: `.github/workflows/ci.yml` — go build on PR
+- CI: `.github/workflows/ci.yml` — `go build ./cmd/... ./servers/... ./pkg/...` on PR
 - No `.env`, `.db`, or binary files in commits
 - Spec documents: `docs/superpowers/specs/YYYY-MM-DD-<topic>-design.md`
 - Merges use `gh pr merge --merge` (merge commit, not squash)

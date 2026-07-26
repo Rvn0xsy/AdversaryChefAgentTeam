@@ -15,4 +15,4 @@ jobs:
           go-version: "1.26"
 
       - name: Build all Go modules
-        run: go build ./...
+        run: go build ./cmd/acactl ./cmd/acasched ./servers/kali/... ./servers/nexus/... ./servers/mythic/... ./pkg/mcputil
