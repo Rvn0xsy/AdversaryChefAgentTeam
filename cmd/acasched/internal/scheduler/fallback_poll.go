@@ -6,6 +6,7 @@ import (
 	"log"
 	"time"
 
+	"adversarychef/acasched/internal/goose"
 	"adversarychef/acasched/internal/store"
 )
 
@@ -49,7 +50,7 @@ func RunFallbackPoll(ctx context.Context, s *store.Store) {
 					Title:       "Supervisor Evaluation (fallback)",
 					Description: fmt.Sprintf("Fallback evaluation.\nProject: %s\nGoal: %s", p.Name, p.Description),
 					CreatedBy:   "fallback_poll",
-					MaxTurns:    40,
+					MaxTurns:    goose.GetMaxTurns("red-team/supervisor"),
 					TimeoutSecs: 600,
 					RetryCount:  0,
 				}

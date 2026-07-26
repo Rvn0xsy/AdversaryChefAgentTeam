@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"adversarychef/acasched/internal/goose"
 	"adversarychef/acasched/internal/store"
 )
 
@@ -64,7 +65,7 @@ func RunEventLoop(ctx context.Context, s *store.Store) {
 					Title:       "Supervisor Evaluation",
 					Description: fmt.Sprintf("Evaluate project state and dispatch agents.\nProject: %s\nGoal: %s", proj.Name, proj.Description),
 					CreatedBy:   "event_loop",
-					MaxTurns:    40,
+					MaxTurns:    goose.GetMaxTurns("red-team/supervisor"),
 					TimeoutSecs: 600,
 					RetryCount:  0,
 				}

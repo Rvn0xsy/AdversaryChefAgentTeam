@@ -53,7 +53,7 @@ func (r *Runner) Execute(ctx context.Context, task *store.Task) (*Result, error)
 	defer os.Remove(sysFile.Name())
 
 	// Write task instructions to temp file → mounted as instructions.md in container
-	prompt := r.buildPrompt(task, agentPromptStr)
+	prompt := r.buildPrompt(task)
 	instFile, err := os.CreateTemp("", "goose-instructions-*.md")
 	if err != nil {
 		return nil, fmt.Errorf("create instructions temp file: %w", err)
@@ -173,7 +173,7 @@ func (r *Runner) Execute(ctx context.Context, task *store.Task) (*Result, error)
 	return parseStreamOutput(string(output)), nil
 }
 
-func (r *Runner) buildPrompt(task *store.Task, agentPrompt string) string {
+func (r *Runner) buildPrompt(task *store.Task) string {
 	return fmt.Sprintf(`## Session Binding
 project_id: %s
 task_id: %s
@@ -185,15 +185,35 @@ task_id: %s
 - Use scheduler_create_task to delegate work
 - Use scheduler_complete_task to mark yourself done
 - Do NOT exit without calling scheduler_complete_task
-
----
-%s`, task.ProjectID, task.ID, task.Description, agentPrompt)
+`, task.ProjectID, task.ID, task.Description)
 }
 
 type Result struct {
 	Status  string
 	Summary string
 	Output  string
+}
+
+// agentMaxTurns defines per-agent turn budgets to avoid wasting tokens
+// on agents that consistently finish early.
+var agentMaxTurns = map[string]int{
+	"red-team/supervisor":     10,
+	"red-team/strategist":     15,
+	"red-team/echo-recon":     30,
+	"red-team/breach-exploit": 20,
+	"red-team/ghost-mythic":   30,
+	"red-team/path-lateral":   50,
+	"red-team/forge-resource": 20,
+	"red-team/quill-report":   15,
+}
+
+// GetMaxTurns returns the recommended max turns for the given agent.
+// Falls back to 30 for unknown agents.
+func GetMaxTurns(agentName string) int {
+	if v, ok := agentMaxTurns[agentName]; ok {
+		return v
+	}
+	return 30
 }
 
 // loadEnvFile reads a .env-style file and returns "KEY=VALUE" pairs.
