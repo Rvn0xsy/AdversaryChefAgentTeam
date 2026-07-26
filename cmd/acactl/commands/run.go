@@ -2,10 +2,7 @@
 package commands
 
 import (
-	"adversarychef/acactl/display"
-	"bufio"
 	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -35,7 +32,7 @@ func Run(acaPort int, goal, projectName string, detach bool) error {
 	}
 
 	// Sequential task following — chase the project chain
-	return followProject(client, base, projectID, taskID)
+	return runTUI(client, base, projectID, goal, taskID)
 }
 
 // resolveProject finds existing project by name or creates a new one.
@@ -102,139 +99,6 @@ func dispatchTask(client *http.Client, base, projectID, agent, title, desc strin
 	var t struct{ ID string `json:"id"` }
 	json.NewDecoder(resp.Body).Decode(&t)
 	return t.ID, nil
-}
-
-// followProject chases tasks in the project: stream one, wait for children, repeat.
-func followProject(client *http.Client, base, projectID, firstTaskID string) error {
-	taskID := firstTaskID
-	followed := map[string]bool{}
-
-	for taskID != "" {
-		followed[taskID] = true
-
-		// Wait for task to leave "pending"
-		if err := waitForStart(client, base, taskID); err != nil {
-			return err
-		}
-
-		// Stream its logs in real-time
-		if err := streamTask(client, base, taskID); err != nil {
-			return err
-		}
-
-		// Check status — if failed/timeout, stop following
-		status := getTaskStatus(client, base, taskID)
-		if status == "failed" || status == "timeout" {
-			fmt.Printf("  \033[31m✗ %s\033[0m\n\n", status)
-			break
-		}
-
-		fmt.Printf("  \033[32m✅ Completed\033[0m\n\n")
-
-		// Find next task to follow (new child we haven't followed yet)
-		taskID = findUnfollowedTask(client, base, projectID, followed)
-	}
-
-	// Final summary
-	return printProjectSummary(client, base, projectID)
-}
-
-func findUnfollowedTask(client *http.Client, base, projectID string, followed map[string]bool) string {
-	resp, err := client.Get(base + "/api/projects/" + projectID + "/tasks")
-	if err != nil {
-		return ""
-	}
-	defer resp.Body.Close()
-	var tasks []struct {
-		ID     string `json:"id"`
-		Status string `json:"status"`
-	}
-	json.NewDecoder(resp.Body).Decode(&tasks)
-
-	for _, t := range tasks {
-		if !followed[t.ID] && (t.Status == "running" || t.Status == "dispatched" || t.Status == "pending") {
-			return t.ID
-		}
-	}
-	return ""
-}
-
-func waitForStart(client *http.Client, base, taskID string) error {
-	fmt.Printf("Task %s dispatched. Waiting for agent...\n", taskID)
-	for {
-		time.Sleep(500 * time.Millisecond)
-		status := getTaskStatus(client, base, taskID)
-		if status == "" {
-			continue
-		}
-		if status != "pending" && status != "dispatched" {
-			return nil
-		}
-	}
-}
-
-func streamTask(client *http.Client, base, taskID string) error {
-	// Get agent name
-	agent := getTaskAgent(client, base, taskID)
-
-	fmt.Println("──────────────────────────────────────────────────")
-	fmt.Printf("  Task %s  [%s]\n\n", taskID, agent)
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	sseURL := base + "/api/tasks/" + taskID + "/logs?follow=true"
-	req, _ := http.NewRequestWithContext(ctx, "GET", sseURL, nil)
-	sseResp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return fmt.Errorf("connect to log stream: %w", err)
-	}
-	defer sseResp.Body.Close()
-
-	sseDone := make(chan struct{})
-
-	go func() {
-		defer close(sseDone)
-		scanner := bufio.NewScanner(sseResp.Body)
-		for scanner.Scan() {
-			line := scanner.Text()
-			if !strings.HasPrefix(line, "data: ") {
-				continue
-			}
-			payload := strings.TrimPrefix(line, "data: ")
-
-			var msg struct {
-				Type    string          `json:"type"`
-				Message *struct {
-					Role    string          `json:"role"`
-					Content json.RawMessage `json:"content"`
-				} `json:"message,omitempty"`
-			}
-			if err := json.Unmarshal([]byte(payload), &msg); err != nil {
-				continue
-			}
-
-			if msg.Type == "message" && msg.Message != nil && msg.Message.Role == "assistant" {
-				lines := display.FormatMessage([]byte(payload))
-				for _, l := range lines {
-					fmt.Println(l)
-				}
-			}
-		}
-	}()
-
-	// Poll status until terminal
-	time.Sleep(3 * time.Second)
-	for {
-		time.Sleep(2 * time.Second)
-		status := getTaskStatus(client, base, taskID)
-		switch status {
-		case "done", "failed", "timeout":
-			cancel()
-			<-sseDone
-			return nil
-		}
-	}
 }
 
 func printProjectSummary(client *http.Client, base, projectID string) error {

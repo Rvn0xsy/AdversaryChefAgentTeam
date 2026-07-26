@@ -376,3 +376,35 @@ func max(a, b int) int {
 	}
 	return b
 }
+
+func runTUI(client *http.Client, base, projectID, projectName, firstTaskID string) error {
+	agent := getTaskAgent(client, base, firstTaskID)
+
+	m := &tuiModel{
+		client:      client,
+		baseURL:     base,
+		projectID:   projectID,
+		projectName: projectName,
+		logs:        make(map[string]*logBuf),
+		tasks: []taskEntry{{
+			ID:     firstTaskID,
+			Agent:  agent,
+			Title:  "Supervisor Evaluation",
+			Status: "pending",
+		}},
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	m.logs[firstTaskID] = &logBuf{
+		running: true,
+		cancel:  cancel,
+	}
+	_ = ctx
+
+	p := tea.NewProgram(m, tea.WithAltScreen())
+	if _, err := p.Run(); err != nil {
+		return err
+	}
+
+	return printProjectSummary(client, base, projectID)
+}
