@@ -1,35 +1,98 @@
-# go docker mcp conventions
-- Go 语言项目，Go 1.26.4
-- go.work monorepo 管理 3 个 Go module：pkg/mcputil、servers/asset、servers/kali
-- Go module 路径：adversarychef/kali、adversarychef/asset、adversarychef/mcputil
-- 共享库 pkg/mcputil：提供 ServerConfig（ParseConfig）、TextResult、Run（含 /health + logging + recovery + graceful shutdown）
-- MCP Server 标准结构：cmd/server/main.go（入口 ~15 行）+ internal/tools/（tool handlers）+ internal/models/ + internal/store/（有状态时）+ internal/job/（异步任务）
-- HTTP/SSE transport 统一使用 mcp.NewSSEHandler
-- 项目根目录：/Users/rvn0xsy/Documents/Git/AdversaryChefAgentTeam
-- 不允许直接调用 OpenAI API，必须走 cc-switch
-- 渗透工具在 Docker 容器中运行
-- Docker Compose 文件位于 docker/docker-compose.yml，kali 容器需 privileged
-- .env 位于 docker/.env（gitignored）
-- 所有代码注释、jsonschema、Tool Description、错误消息均为英文
-- servers/kali 端口 8080，servers/asset 端口 8081
-- kali 的 job.Manager 有 DefaultMaxOutput=500_000 和 DefaultTimeout=30min 常量
+# AdversaryChef Agent Team — Project Conventions
 
-## Phase 0 关键经验
+## Go Project
 
-### MCP 传输协议
-- 必须用 `mcp.NewStreamableHTTPHandler` (2025-03-26 spec, Mcp-Session-Id header)
-- 不能用 `mcp.NewSSEHandler` (2024 spec, ?sessionid= query param)
-- Agent MCP 配置格式: `{"mcpServers":{"name":{"type":"http","url":"http://127.0.0.1:PORT"}}}`
-- `type` 是 "http" 不是 "sse"
+- Go 1.26.4, go.work monorepo
+- Modules: cmd/acasched, cmd/acactl, servers/nexus, servers/kali, servers/mythic, pkg/mcputil
+- Module paths: adversarychef/acasched, adversarychef/acactl, adversarychef/nexus, adversarychef/kali, adversarychef/mythic, adversarychef/mcputil
+- MCP Server structure: cmd/server/main.go + internal/{models,store,tools,job}/
+- MCP transport: Streamable HTTP (Mcp-Session-Id header), NOT SSE
+- Shared library pkg/mcputil: ServerConfig, TextResult, Run(), SessionMap, ProjectIDFromContext, AddLoggingTool
+- All code comments, jsonschema, Tool Descriptions, error messages in English
 
-### Docker
-- docker.1ms.run 官方镜像需要 /library/ 前缀: `docker.1ms.run/library/golang:1.26-alpine`
-- go.mod 修改后必须 --no-cache 重建
-- replace 指向的本地包 (pkg/) 必须在 go mod download 之前 COPY
-- kalilinux/kali-rolling 镜像站未同步，需从 Docker Hub 直拉
+## Architecture
 
-### Multica
-- daemon 只在启动时扫描 PATH，安装新 runtime 后必须 `multica daemon restart`
-- per-task CODEX_HOME 会保留用户原有的 [model_providers] 配置，不会覆盖
-- daemon 用户 (dev) 的 ~/.codex/config.toml 必须存在且指向 cc-switch proxy
+### Components
 
+| Service | Port | Role |
+|---------|------|------|
+| acasched | 9090 | Scheduler daemon — event loop, dispatcher, goose runner |
+| nexus-mcp | 8081 | Graph DB + MCP — CRUD, graph queries, webhooks, scheduler bridge |
+| kali-mcp | 8080 | Async shell execution — exec, list_jobs, get_job, kill_job |
+| mythic-mcp | 8082 | Mythic C2 proxy — callbacks, tasks, files, payloads |
+
+### Event Flow
+
+```
+Agent writes to nexus graph
+  → nexus-mcp EventedStore POSTs webhook to acasched /api/events
+    → acasched event loop (5s debounce) creates Supervisor task
+      → dispatcher runs goose Docker container
+        → Supervisor queries nexus, evaluates, dispatches agents in parallel
+```
+
+### Agent Squad (prompts/red-team/)
+
+| Agent | Role | Trigger |
+|-------|------|---------|
+| supervisor | Read-only coordinator | Graph change or fallback poll |
+| echo-recon | Recon: port scan, DNS, HTTP, JS | hosts == 0 |
+| breach-exploit | Exploit verification, PoC | host + service + evidence |
+| ghost-mythic | C2 via Mythic | confirmed vulnerability |
+| path-lateral | Lateral movement | active C2 session |
+| forge-resource | Infrastructure: VPS, tunnels | alongside AC-Echo |
+| quill-report | Final report | goal achieved or deadlock |
+| strategist | Attack path design | path unclear |
+
+### Boundary Control (3 Layers)
+
+1. Supervisor dispatch pre-condition matrix — verify prerequisites before dispatch
+2. Agent pre-flight gate (Step 0) — self-check prerequisites, bail if missing
+3. Circuit breaker — 3 repeated failures → stop; 3 stale evaluation cycles → deadlock → AC-Quill
+
+## Key Files and Paths
+
+### Configuration
+- `.env` — LLM provider config (GOOSE_PROVIDER, GOOSE_MODEL, OPENAI_API_KEY, OPENAI_HOST, OPENAI_BASE_PATH)
+- `prompts/_mcp-registry.yaml` — MCP server URL registry
+- `prompts/_squads.yaml` — Squad definitions
+- `docker/docker-compose.yml` — Service orchestration
+
+### Agent Runtime
+- Agent runs in `goose` Docker container (docker/goose/Dockerfile)
+- Runner passes .env variables + mounts prompt file + mounts skill directories
+- Skills: `skills/_shared/scheduler/` (scheduler_* tool descriptions), `skills/red-team/kali/` (kali tool descriptions)
+- Prompts: `prompts/red-team/<agent>.md` with YAML frontmatter (Purpose, Requires, Skills, Input, Output)
+
+### Data
+- acasched DB: `~/.aca/data/acasched.db` (tasks, projects)
+- nexus DB: SQLite per instance
+- Task logs: `~/.aca/logs/tasks/<task_id>.jsonl` (JSONL stream-json output)
+
+## Development Workflow
+
+- Every change: worktree → branch → PR → review → gh merge (see CONTRIBUTING.md)
+- Branch naming: `<type>/<description>` (feat/, fix/, docs/, refactor/, prompt/)
+- Commit messages: `<type>: <description>`
+- PR template: `.github/PULL_REQUEST_TEMPLATE.md`
+- CI: `.github/workflows/ci.yml` — go build on PR
+- No `.env`, `.db`, or binary files in commits
+- Spec documents: `docs/superpowers/specs/YYYY-MM-DD-<topic>-design.md`
+- Merges use `gh pr merge --merge` (merge commit, not squash)
+
+## Key Design Decisions
+
+### Why event-driven instead of polling?
+- Polling wastes LLM tokens on no-change evaluations
+- Webhooks give instant reactivity when agents write to nexus
+- Fallback poll (60s) as safety net for missed events
+
+### Why fire-and-forget + harvest instead of job_wait?
+- `job_wait` blocks the agent's turn budget on I/O wait
+- Fire-and-forget lets agent do other work (DNS, HTTP) while scan runs
+- Harvest at end: `list_jobs` + `get_job` to collect results
+
+### Why merge commits instead of squash?
+- Merge commits preserve branch history for traceability
+- Each PR = one logical change with full commit context
+- Easier to revert specific features if needed
