@@ -3,58 +3,44 @@ recipe:
   version: "1.0.0"
   title: "Start Feature Development"
   description: >
-    Start a new feature following CONTRIBUTING.md:
-    worktree → branch → develop → PR → review → merge.
+    Describe your feature idea and I'll set up an isolated worktree
+    following CONTRIBUTING.md: worktree → branch → develop → PR → review → merge.
   instructions: |-
     You are assisting with feature development for the AdversaryChefAgentTeam project.
 
+    **Prerequisite**: You MUST load the using-superpowers skill before anything else.
+    Then follow CONTRIBUTING.md workflow.
+
     ## Steps (in order)
 
-    1. Load the using-superpowers skill and follow it.
-    2. Read CONTRIBUTING.md from the project root.
-    3. Read .goose/memory/project-conventions.txt for architecture context.
+    1. Load the using-superpowers skill and follow its instructions.
+    2. Read CONTRIBUTING.md and .goose/memory/project-conventions.txt for project context.
+    3. The user described the feature in natural language. Decide:
+       - **type**: `feat` | `fix` | `docs` | `refactor` | `prompt`
+       - **name**: short kebab-case slug (max 3-4 words)
+       Confirm your decision with the user before proceeding.
     4. Verify prerequisites:
        - `gh auth status` is authenticated
        - `git fetch github` works
        - `go build ./cmd/acactl ./cmd/acasched ./servers/kali/... ./servers/nexus/... ./servers/mythic/... ./pkg/mcputil` passes
-    5. Create worktree following using-git-worktrees skill:
+    5. Create isolated worktree:
        ```bash
        git fetch github
-       git worktree add -b {{ type }}/{{ name }} .worktrees/{{ name }} github/main
-       cd .worktrees/{{ name }}
+       git worktree add -b <type>/<name> .worktrees/<name> github/main
+       cd .worktrees/<name>
        ```
-    6. Run build to verify clean baseline:
-       ```bash
-       go build ./cmd/acactl ./cmd/acasched ./servers/kali/... ./servers/nexus/... ./servers/mythic/... ./pkg/mcputil
-       ```
-    7. Report: worktree path, branch name, build status. Confirm developer is ready to code.
+    6. Run build to verify clean baseline.
+    7. Report: branch name, worktree path, build status. Ready to code.
 
     ## Constraints
-
     - NEVER modify main directly — always use the worktree
     - Commit format: `<type>: <description>`
-    - Branch format: `{{ type }}/{{ name }}`
-    - Before push: build passes, no .env/.db/binary files in commit
-    - When code is ready: push to github, create PR via `gh pr create`, request review
-  prompt: "Start a new feature for {{ type }}/{{ name }} following CONTRIBUTING.md."
-  parameters:
-    - key: name
-      input_type: string
-      requirement: required
-      description: "Short feature name (e.g. add-user-auth)"
-    - key: type
-      input_type: select
-      requirement: required
-      description: "Type of change"
-      options:
-        - feat
-        - fix
-        - docs
-        - refactor
-        - prompt
+    - Before push: build passes, no .env/.db/binary files committed
+    - When code is ready: `git push github`, `gh pr create`, request review
+  prompt: "I want to develop a new feature for this project. Please help me follow the CONTRIBUTING.md workflow."
   activities:
-    - "message: I'll set up an isolated worktree for **{{ type }}/{{ name }}**, following CONTRIBUTING.md. I'll verify prerequisites, create the branch, and confirm the build is clean."
-    - "Start {{ type }}/{{ name }}"
+    - "message: Describe what you want to build in your own words — I'll figure out the right branch name, create an isolated worktree, and get you ready to code."
+    - "I want to build a new feature"
   settings:
     max_turns: 20
   extensions:
