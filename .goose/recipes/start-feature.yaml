@@ -1,0 +1,64 @@
+name: "Start Feature Development"
+recipe:
+  version: "1.0.0"
+  title: "Start Feature Development"
+  description: >
+    Start a new feature following CONTRIBUTING.md:
+    worktree → branch → develop → PR → review → merge.
+  instructions: |-
+    You are assisting with feature development for the AdversaryChefAgentTeam project.
+
+    ## Steps (in order)
+
+    1. Load the using-superpowers skill and follow it.
+    2. Read CONTRIBUTING.md from the project root.
+    3. Read .goose/memory/project-conventions.txt for architecture context.
+    4. Verify prerequisites:
+       - `gh auth status` is authenticated
+       - `git fetch github` works
+       - `go build ./cmd/acactl ./cmd/acasched ./servers/kali/... ./servers/nexus/... ./servers/mythic/... ./pkg/mcputil` passes
+    5. Create worktree following using-git-worktrees skill:
+       ```bash
+       git fetch github
+       git worktree add -b {{ type }}/{{ name }} .worktrees/{{ name }} github/main
+       cd .worktrees/{{ name }}
+       ```
+    6. Run build to verify clean baseline:
+       ```bash
+       go build ./cmd/acactl ./cmd/acasched ./servers/kali/... ./servers/nexus/... ./servers/mythic/... ./pkg/mcputil
+       ```
+    7. Report: worktree path, branch name, build status. Confirm developer is ready to code.
+
+    ## Constraints
+
+    - NEVER modify main directly — always use the worktree
+    - Commit format: `<type>: <description>`
+    - Branch format: `{{ type }}/{{ name }}`
+    - Before push: build passes, no .env/.db/binary files in commit
+    - When code is ready: push to github, create PR via `gh pr create`, request review
+  prompt: "Start a new feature for {{ type }}/{{ name }} following CONTRIBUTING.md."
+  parameters:
+    - key: name
+      input_type: string
+      requirement: required
+      description: "Short feature name (e.g. add-user-auth)"
+    - key: type
+      input_type: select
+      requirement: required
+      description: "Type of change"
+      options:
+        - feat
+        - fix
+        - docs
+        - refactor
+        - prompt
+  activities:
+    - "message: I'll set up an isolated worktree for **{{ type }}/{{ name }}**, following CONTRIBUTING.md. I'll verify prerequisites, create the branch, and confirm the build is clean."
+    - "Start {{ type }}/{{ name }}"
+  settings:
+    max_turns: 20
+  extensions:
+    - type: platform
+      name: summon
+isGlobal: false
+isArchived: false
