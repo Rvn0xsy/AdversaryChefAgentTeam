@@ -1,133 +1,190 @@
-# AdversaryChefAgentTeam
+# AdversaryChef Agent Team
 
-Red team agent platform — collaborative penetration testing with Multica + Codex + MCP.
+Event-driven, parallel red-team agent squad. Agents collaborate via nexus-mcp graph, orchestrated by an acasched scheduler — no human in the loop.
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                      Multica Server                         │
-│               (task orchestration · issue tracking)          │
-└─────────────────────┬───────────────────────────────────────┘
+                            ┌──────────────┐
+                            │   acactl     │  one-shot CLI
+                            │  run -goal   │  builds + starts all services
+                            └──────┬───────┘
+                                   │
+                    ┌──────────────┴──────────────┐
+                    │         acasched            │
+                    │   :9090  event loop         │
+                    │   dispatcher · fallback poll │
+                    └──────┬──────────┬───────────┘
+                           │          │
+              ┌────────────▼──┐  ┌────▼───────────┐
+              │   nexus-mcp   │  │    kali-mcp     │
+              │    :8081      │  │    :8080        │
+              │  graph DB     │  │  async jobs     │
+              │  webhooks →   │  │  nmap/curl/ssh  │
+              └───────┬───────┘  └────────────────┘
                       │
-┌─────────────────────▼───────────────────────────────────────┐
-│                    Daemon + Codex CLI                        │
-│          (runtime executor · cc-switch → model)              │
-└────┬────────────────┬──────────────────┬────────────────────┘
-     │                │                  │
-┌────▼────┐    ┌──────▼──────┐    ┌──────▼──────┐
-│ kali-mcp│    │  asset-mcp  │    │  mythic-mcp │
-│  :8080  │    │   :8081     │    │   :8082     │
-│ Kali    │    │ SQLite CRUD │    │ Mythic C2   │
-│ tools   │    │ assets/creds│    │ proxy       │
-└─────────┘    └─────────────┘    └─────────────┘
+         ┌────────────┼────────────┐
+         │            │            │
+    ┌────▼───┐  ┌─────▼────┐  ┌───▼──────┐
+    │ AC-Echo│  │AC-Breach │  │AC-Forge  │ ... goose containers
+    │ recon  │  │ exploit  │  │ infra    │     docker run --rm
+    └────────┘  └──────────┘  └──────────┘
 ```
+
+**Event flow**: Agent writes to nexus-graph → nexus POSTs webhook to acasched → Supervisor wakes up → evaluates state → dispatches next agents in parallel.
+
+## Red Team Squad
+
+| Agent | Role | Trigger |
+|-------|------|---------|
+| **AC-Supervisor** | Read-only coordinator. Evaluates nexus graph, dispatches agents | Graph change |
+| **AC-Echo** | Recon: port scan, DNS, HTTP probe, JS crawl | hosts == 0 |
+| **AC-Breach** | Exploit verification, PoC, initial access | host + service + evidence |
+| **AC-Ghost** | C2 operations via Mythic | confirmed vulnerability |
+| **AC-Path** | Lateral movement from active session | active C2 session |
+| **AC-Forge** | Infrastructure: VPS, tunnels, SSH keys | alongside AC-Echo |
+| **AC-Quill** | Final report generation | goal achieved or deadlock |
+| **AC-Strategist** | Attack path design | path unclear |
+
+Each agent has a 3-layer boundary control: Supervisor pre-conditions → agent pre-flight gate → circuit breaker.
 
 ## Project Structure
 
 ```
 AdversaryChefAgentTeam/
-├── go.work                       # Go monorepo workspace (4 modules)
-├── pkg/mcputil/                  # Shared MCP server library
-│   └── mcputil.go                # ServerConfig · TextResult · Run() · /health · middleware
+├── cmd/
+│   ├── acactl/              # One-shot CLI: builds + starts services, dispatches tasks
+│   │   ├── main.go
+│   │   ├── commands/        # run, logs, project subcommands
+│   │   ├── display/         # Terminal output formatting
+│   │   └── lifecycle/       # Service lifecycle (build, start, stop)
+│   └── acasched/            # Scheduler daemon (:9090)
+│       ├── main.go
+│       └── internal/
+│           ├── api/         # REST API (projects, tasks, events)
+│           ├── goose/       # Docker runner (goose containers)
+│           ├── scheduler/   # Dispatcher, event loop, trigger, fallback poll
+│           └── store/       # SQLite task/project persistence
 ├── servers/
-│   ├── kali/                     # Kali MCP server (port 8080)
-│   │   ├── cmd/server/main.go
-│   │   └── internal/{job,tools}/
-│   ├── asset/                    # Asset MCP server (port 8081)
-│   │   ├── cmd/server/main.go
-│   │   └── internal/{models,store,tools}/
-│   └── mythic/                   # Mythic C2 proxy server (port 8082)
-│       ├── cmd/server/main.go
-│       └── internal/{client,tools}/
-├── docker/                       # Docker Compose + container definitions
-│   ├── docker-compose.yml
-│   ├── README.md
-│   ├── data/{codex,multica,db}/  # Persistent data & config templates
-│   ├── daemon/Dockerfile
-│   ├── kali-mcp/Dockerfile
-│   ├── asset-mcp/Dockerfile
-│   └── mythic-mcp/Dockerfile
-├── skills/                       # Red team playbooks (SKILL.md skeletons)
-│   ├── penetration-methodology/
-│   ├── owasp-checklist/
-│   ├── compliance-rules/
-│   ├── weekly-report-template/
-│   └── retrospective-template/
-├── docs/                         # Design docs · architecture decisions
-└── scripts/                      # Setup & verification scripts
+│   ├── nexus/               # Graph DB + MCP server (:8081)
+│   │   ├── cmd/server/
+│   │   └── internal/
+│   │       ├── models/      # Graph node types (Host, Service, Endpoint, etc.)
+│   │       ├── store/       # SQLite store + EventedStore webhook decorator
+│   │       └── tools/       # MCP tools (CRUD, graph query, scheduler bridge)
+│   ├── kali/                # Async shell execution MCP server (:8080)
+│   │   └── internal/
+│   │       ├── job/         # Job manager (async exec, status tracking)
+│   │       └── tools/       # exec, list_jobs, get_job, kill_job
+│   └── mythic/              # Mythic C2 proxy MCP server (:8082)
+│       └── internal/
+│           ├── client/      # Mythic HTTP client
+│           └── tools/       # callback, task, file, payload tools
+├── prompts/
+│   ├── red-team/            # Agent prompt files (.md)
+│   │   ├── supervisor.md    # Read-only coordinator + dispatch pre-conditions
+│   │   ├── echo-recon.md    # Fire-and-forget recon
+│   │   ├── breach-exploit.md
+│   │   ├── ghost-mythic.md
+│   │   ├── path-lateral.md
+│   │   ├── forge-resource.md
+│   │   ├── quill-report.md
+│   │   ├── strategist.md
+│   │   └── squad.md         # Squad manifest
+│   ├── _mcp-registry.yaml   # MCP server URL registry
+│   ├── _squads.yaml         # Squad definitions
+│   └── _tools/              # Tool documentation snippets
+├── skills/
+│   ├── _shared/scheduler/   # scheduler_* tool descriptions
+│   └── red-team/kali/       # Kali tool descriptions
+├── pkg/mcputil/              # Shared MCP server library
+├── docker/                   # Dockerfiles + compose
+├── docs/
+│   ├── superpowers/specs/   # Design specs
+│   └── research/            # Architecture research notes
+├── go.work                   # Go workspace (4 modules)
+├── .env                      # LLM provider config (gitignored)
+└── acactl                    # Prebuilt CLI binary (gitignored)
 ```
 
-## MCP Servers
+## Boundary Control (3-Layer Defense)
 
-| Server | Port | Module | Description |
-|--------|------|--------|-------------|
-| **kali** | 8080 | `adversarychef/kali` | Async job execution: nmap, sqlmap, metasploit, gobuster, hydra |
-| **asset** | 8081 | `adversarychef/asset` | CRUD for projects, assets, clues, credentials, work logs (SQLite) |
-| **mythic** | 8082 | `adversarychef/mythic` | Mythic C2 proxy: callbacks, tasks, files, payloads |
+```
+Layer 1: Supervisor pre-condition matrix
+  └─ Before dispatching ANY agent, verify all prerequisites exist in nexus graph.
+     Missing? → Don't dispatch. Record skip reason.
 
-Shared library `pkg/mcputil` provides:
-- `ServerConfig` — unified flag parsing (`--host`, `--port`, `--db`, `--mythic-server`, etc.)
-- `TextResult()` — MCP text response helper
-- `Run()` — SSE handler + `/health` + request logging + panic recovery + graceful shutdown
+Layer 2: Agent pre-flight gate
+  └─ Step 0 of every agent workflow. Query nexus for prerequisites.
+     Missing? → scheduler_complete_task immediately. Don't cross boundaries.
+
+Layer 3: Circuit breaker
+  └─ Agent: 3 repeated failures → stop. 3 harvest cycles with 0 progress → stop.
+     Supervisor: 3 evaluations with 0 graph changes → deadlock → dispatch AC-Quill.
+```
 
 ## Quick Start
 
 ### Prerequisites
 
-- Docker & Docker Compose v2
-- Multica server (self-hosted)
-- Codex CLI with cc-switch configured
-- (Optional) Mythic C2 server for mythic-mcp
+- Go 1.26+
+- Docker
+- LLM API key (OpenAI-compatible)
 
 ### Setup
 
 ```bash
-# Clone
-git clone <repo-url> && cd AdversaryChefAgentTeam
+git clone git@github.com:Rvn0xsy/AdversaryChefAgentTeam.git
+cd AdversaryChefAgentTeam
 
-# Configure
-cp docker/data/codex/config.toml.example docker/data/codex/config.toml
-cp docker/data/multica/docker-compose.selfhost.yml.example docker/data/multica/docker-compose.selfhost.yml
-# Edit config.toml with your cc-switch URL and API key
-
-# Set environment
-cat > docker/.env << EOF
-MULTICA_API_URL=http://multica-server:3000
-MYTHIC_SERVER=https://mythic.lab:7443
-MYTHIC_API_KEY=your-token
+# Configure LLM provider
+cat > .env << EOF
+GOOSE_PROVIDER=openai
+GOOSE_MODEL=deepseek-v4-flash
+OPENAI_API_KEY=sk-your-key
+OPENAI_HOST=https://api.deepseek.com
+OPENAI_BASE_PATH=v1/chat/completions
 EOF
 
-# Build & run
-cd docker && docker compose up -d --build
+# Build goose Docker image
+docker build -t goose -f docker/goose/Dockerfile .
 ```
 
-### Local Development
+### Run an engagement
 
 ```bash
-# Build all Go modules
-go work sync && go build ./...
-
-# Run individual servers
-cd servers/kali  && go run ./cmd/server  -port 8080
-cd servers/asset && go run ./cmd/server  -port 8081 -db /tmp/asset.db
-cd servers/mythic && go run ./cmd/server -port 8082 -mythic-server https://mythic.lab:7443 -mythic-api-key YOUR_KEY
-
-# Run tests
-go test -C servers/kali ./...
+./acactl run -goal "对这个服务器进行渗透：113.31.118.180"
 ```
 
-## Technology
+acactl will: build acasched → start kali-mcp → start nexus-mcp → start acasched → create project → dispatch Supervisor → observe the squad at work.
 
-- **Go 1.26.4** — all MCP servers
-- **[mcp-go-sdk](https://github.com/modelcontextprotocol/go-sdk) v1.6.1** — MCP protocol
-- **HTTP/SSE transport** — not stdio
-- **go.work monorepo** — 4 modules, one workspace
-- **Docker Compose** — orchestrated deployment, no exposed ports, all bind-mount volumes
+### Monitor progress
+
+```bash
+# Follow a specific task
+./acactl logs <task-id> --follow
+
+# Follow by project name
+./acactl logs "Penetration Test" --follow
+
+# Direct SQLite inspection
+sqlite3 ~/.aca/data/acasched.db "SELECT substr(id,-8), agent, status FROM tasks ORDER BY created_at;"
+```
+
+### Development
+
+```bash
+# Build all
+go build ./...
+
+# Run individual servers
+cd servers/kali  && go run ./cmd/server -port 8080
+cd servers/nexus && go run ./cmd/server -port 8081 -db /tmp/nexus.db
+cd cmd/acasched && go run . -db /tmp/acasched.db -prompts prompts -skills skills -env .env
+```
 
 ## Documents
 
-- [Technical Design](docs/red-team-agent-design.md)
+- [Event-Driven Parallel Squad Design](docs/superpowers/specs/2026-07-26-event-driven-parallel-squad-design.md)
+- [Agent Boundary Control Design](docs/superpowers/specs/2026-07-26-agent-boundary-control-design.md)
 - [MCP Server Development Guide](docs/mcp-server-guide.md)
-- [Phase 0 Experiment Notes](docs/phase-0-notes.md)
-- [Docker Deployment](docker/README.md)
