@@ -23,7 +23,7 @@
 
 <!-- All must be checked before requesting review -->
 
-- [ ] `go build ./...` passes (from project root)
+- [ ] `go build ./cmd/acactl ./cmd/acasched ./servers/kali/... ./servers/nexus/... ./servers/mythic/... ./pkg/mcputil` passes (from project root)
 - [ ] Prompt changes: boundaries, pre-flight gates, and circuit breakers verified
 - [ ] Spec in `docs/superpowers/specs/` if applicable
 - [ ] No `.env`, `.db`, binary files committed

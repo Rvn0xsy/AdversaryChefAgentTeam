@@ -45,7 +45,7 @@ gh pr create --base main --title "<type>: <description>" --body "$(cat .github/P
 ```
 
 **Before creating PR, verify:**
-- [ ] `go build ./...` passes (from project root)
+- [ ] Build passes: `go build ./cmd/acactl ./cmd/acasched ./servers/kali/... ./servers/nexus/... ./servers/mythic/... ./pkg/mcputil`
 - [ ] Prompt changes: tested with squad flow
 - [ ] Spec in `docs/superpowers/specs/` if applicable
 - [ ] No `.env`, `.db`, binary files in commit
@@ -83,7 +83,7 @@ git worktree remove .worktrees/<description>
 
 ### Go
 
-- `go build ./...` must pass from project root
+- Build passes: `go build ./cmd/acactl ./cmd/acasched ./servers/kali/... ./servers/nexus/... ./servers/mythic/... ./pkg/mcputil`
 - New Go files: package comment at top
 - Error handling: always check, always log or return
 - Use `log.Printf` over `fmt.Println` in server code
