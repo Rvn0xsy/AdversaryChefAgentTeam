@@ -183,6 +183,10 @@ cd servers/nexus && go run ./cmd/server -port 8081 -db /tmp/nexus.db
 cd cmd/acasched && go run . -db /tmp/acasched.db -prompts prompts -skills skills -env .env
 ```
 
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the full development workflow: worktree → branch → PR → review → merge.
+
 ## Documents
 
 - [Event-Driven Parallel Squad Design](docs/superpowers/specs/2026-07-26-event-driven-parallel-squad-design.md)
